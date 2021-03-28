@@ -9,12 +9,36 @@
 #include <vector>
 #include <string>
 
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 #include <emscripten.h>
 
 // X and Y screen resolution
 constexpr int X_SCREEN=1024;
 constexpr int Y_SCREEN=768;
+
+class Display
+{
+  public:
+
+  Display()
+  {
+    SDL_CreateWindowAndRenderer( X_SCREEN, Y_SCREEN, 0, &window, &mainRenderer );
+  }
+  ~Display()
+  {
+    SDL_DestroyRenderer( mainRenderer );
+    mainRenderer = nullptr;
+    SDL_DestroyWindow( window );
+    window = nullptr;
+    SDL_Quit();
+  }
+
+  SDL_Renderer* renderer() { return mainRenderer; }
+
+  SDL_Window*                   window = nullptr;
+  SDL_Renderer*                 mainRenderer = nullptr;
+  std::unique_ptr< int >        copy_blocker;
+};
 
 // Make a Color palette
 class Palette
@@ -65,17 +89,11 @@ class Palette
 };
 
 // Draw the game of life buffer on the screen.
-void drawScreen( SDL_Surface *screen )
+void drawScreen( std::shared_ptr<Display> display )
 {
-  // for testing
-  static Uint32 black = SDL_MapRGBA( screen->format, 0, 0, 0, 255 );
-  const Palette palette(screen);
-  black += 0x01010101;
-
-  // Clear
-  Uint32 *start = (Uint32*)screen->pixels;
-  Uint32 *end= start + X_SCREEN * Y_SCREEN;
-  for ( Uint32 *cur = start; cur < end; ++cur ) *cur = black;
+  SDL_SetRenderDrawColor( display->renderer(), 255, 0, 0, 255 );
+  SDL_RenderClear( display->renderer() );
+  SDL_RenderPresent( display->renderer() ); 
 }
 
 // Creates the screen 
@@ -86,27 +104,21 @@ class PIDSimSingleton
   PIDSimSingleton( const PIDSimSingleton& other ) = delete;
   PIDSimSingleton& operator=( const PIDSimSingleton& other ) = delete;
 
-  PIDSimSingleton() 
-  {
-    SDL_Init(SDL_INIT_VIDEO );
-    screen = SDL_SetVideoMode(X_SCREEN, Y_SCREEN, 32, SDL_SWSURFACE);
-  }
+  PIDSimSingleton() :
+    display{ std::make_shared<Display>() } 
+  {}
+
   ~PIDSimSingleton()
   {
-    screen = nullptr;
-    SDL_Quit();
   }
   
   void update( void )
   {
-    if (SDL_MUSTLOCK(screen)) SDL_LockSurface(screen);
-    drawScreen( screen );
-    if (SDL_MUSTLOCK(screen)) SDL_UnlockSurface(screen);
-    SDL_UpdateRect(screen, 0, 0, 0, 0); 
+    drawScreen( display );
   }
 
   private:
-  SDL_Surface *screen;
+  std::shared_ptr<Display> display;
 };
 
 std::unique_ptr< PIDSimSingleton > singleton; 
