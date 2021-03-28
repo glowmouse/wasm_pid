@@ -199,6 +199,7 @@ public:
     Window *window = new Window(this, "Robot Arm PID Simulator");
     window->setPosition(Vector2i(15, 15));
     window->setLayout(new GroupLayout());
+    window->setFixedSize(Vector2i( mSize.x()/2-30, mSize.y()-30 ));
 
     /* No need to store a pointer, the data structure will be automatically
        freed when the parent window is deleted */
@@ -255,6 +256,10 @@ public:
     start->setFlags( Button::ToggleButton );
     Button* reset = new Button( panel, "Reset" );
 
+    Window *chartWindow = new Window(this, "PID Stats over Time");
+    chartWindow->setPosition(Vector2i( mSize.x()/2, 15));
+    chartWindow->setFixedSize(Vector2i( mSize.x()/2-15, mSize.y()/2 ));
+
     performLayout();
 
     /* All NanoGUI widgets are initialized at this point. Now
@@ -291,6 +296,22 @@ public:
             "    color = vec4(vec3(intensity), 1.0);\n"
             "}"
         );
+
+        MatrixXu indices(3, 2); /* Draw 2 triangles */
+        indices.col(0) << 0, 1, 2;
+        indices.col(1) << 2, 3, 0;
+
+        MatrixXf positions(3, 4);
+        positions.col(0) << -1, -1, 0;
+        positions.col(1) <<  1, -1, 0;
+        positions.col(2) <<  1,  1, 0;
+        positions.col(3) << -1,  1, 0;
+
+        mShader.bind();
+        mShader.uploadIndices(indices);
+        mShader.uploadAttrib("position", positions);
+        mShader.setUniform("intensity", 0.5f);
+
     }
 
     ~ExampleApplication() {
@@ -325,8 +346,12 @@ public:
         Matrix4f mvp;
         mvp.setIdentity();
         mvp.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf((float) glfwGetTime(),  Vector3f::UnitZ())) * 0.25f;
-
         mvp.row(0) *= (float) mSize.y() / (float) mSize.x();
+
+
+
+        mvp(0,3) += .5;
+        mvp(1,3) -= .5;
 
         mShader.setUniform("modelViewProj", mvp);
 
