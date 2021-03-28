@@ -1,4 +1,4 @@
-# Very quick/dirty makefile for building the nanogui example1.cpp in emscripten
+# Very quick/dirty makefile for building the nanogui main.cpp in emscripten
 # Puts the result in the `build/` directory
 #
 # Makefile tips:
@@ -18,11 +18,19 @@ LDFLAGS=-lGL -lm -lGLEW
 
 CFLAGS=$(INCFLAGS) $(EMFLAGS) $(NANOFLAGS) $(GLFLAGS)
 
-build/nanogui.html: nanovg.wasm button.wasm checkbox.wasm colorpicker.wasm colorwheel.wasm combobox.wasm common.wasm glcanvas.wasm glutil.wasm graph.wasm imagepanel.wasm imageview.wasm label.wasm layout.wasm messagedialog.wasm popup.wasm popupbutton.wasm progressbar.wasm screen.wasm serializer.wasm slider.wasm stackedwidget.wasm tabheader.wasm tabwidget.wasm textbox.wasm theme.wasm vscrollpanel.wasm widget.wasm window.wasm nanogui_resources.wasm
-	$(CC) $(CFLAGS) example1.cpp $^ $(LDFLAGS) -o $@ --preload-file ./icons
+build/nanogui.html: main.cpp nanovg.wasm button.wasm checkbox.wasm colorpicker.wasm colorwheel.wasm combobox.wasm common.wasm glcanvas.wasm glutil.wasm graph.wasm imagepanel.wasm imageview.wasm label.wasm layout.wasm messagedialog.wasm popup.wasm popupbutton.wasm progressbar.wasm screen.wasm serializer.wasm slider.wasm stackedwidget.wasm tabheader.wasm tabwidget.wasm textbox.wasm theme.wasm vscrollpanel.wasm widget.wasm window.wasm nanogui_resources.wasm
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@ --preload-file ./icons
 
 nanovg.wasm: ext/nanovg.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 %.wasm: %.cpp
 	$(CC) $(CFLAGS) -c $< -o $@
+
+clean: 
+	$(RM) *.wasm
+	$(RM) build/nanogui.data
+	$(RM) build/nanogui.html
+	$(RM) build/nanogui.js
+	$(RM) build/nanogui.wasm
+
