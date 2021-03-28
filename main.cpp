@@ -34,6 +34,7 @@
 #include <nanogui/graph.h>
 #include <nanogui/tabwidget.h>
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <emscripten.h>
 
@@ -147,7 +148,8 @@ nanogui::TextBox* make_slider(
   const std::string&                  labelText,
   float                               slider_start_pos,
   std::function<std::string(float)>   slider_to_label,
-  const std::string&                  units
+  const std::string&                  units,
+  bool                                noSlider = false
 )
 {
   using namespace nanogui;
@@ -157,21 +159,31 @@ nanogui::TextBox* make_slider(
   Label *label = new Label(panel, labelText, "sans-bold");
   label->setFixedWidth(120);
 
-  Slider *slider = new Slider(panel);
-  slider->setValue(slider_start_pos);
-  slider->setFixedWidth(80);
+  Slider *slider;
+  if ( !noSlider ) {
+    slider = new Slider(panel);
+    slider->setValue(slider_start_pos);
+    slider->setFixedWidth(80);
+  }
+  else {
+    Widget *deadSpace = new Widget(panel);
+    deadSpace->setFixedWidth(80);
+  }
 
   TextBox *textBox = new TextBox(panel);
   textBox->setFixedSize(Vector2i(90, 25));
   textBox->setValue(slider_to_label(slider_start_pos));
   textBox->setUnits(units);
-  slider->setCallback([textBox,slider_to_label](float value) 
-    { textBox->setValue(slider_to_label(value)); } 
-  );
-  slider->setFinalCallback([slider_to_label](float value) {
-    cout << "Final slider value: " << slider_to_label(value) << endl;
-  });
-  textBox->setFixedSize(Vector2i(60,25));
+
+  if ( !noSlider ) {
+    slider->setCallback([textBox,slider_to_label](float value) 
+      { textBox->setValue(slider_to_label(value)); } 
+    );
+    slider->setFinalCallback([slider_to_label](float value) {
+      cout << "Final slider value: " << slider_to_label(value) << endl;
+    });
+  }
+  textBox->setFixedSize(Vector2i(80,25));
   textBox->setFontSize(20);
   textBox->setAlignment(TextBox::Alignment::Right);
   return textBox;
@@ -179,7 +191,7 @@ nanogui::TextBox* make_slider(
 
 class ExampleApplication : public nanogui::Screen {
 public:
-    ExampleApplication() : nanogui::Screen(Eigen::Vector2i(1024, 768), "NanoGUI Test", /*resizable*/true, /*fullscreen*/false, /*colorBits*/8,
+    ExampleApplication() : nanogui::Screen(Eigen::Vector2i(800, 600), "NanoGUI Test", /*resizable*/true, /*fullscreen*/false, /*colorBits*/8,
                                 /*alphaBits*/8, /*depthBits*/24, /*stencilBits*/8,
                                 /*nSamples*/0, /*glMajor*/3, /*glMinor*/0) 
   {
@@ -187,20 +199,61 @@ public:
     Window *window = new Window(this, "Robot Arm PID Simulator");
     window->setPosition(Vector2i(15, 15));
     window->setLayout(new GroupLayout());
+
     /* No need to store a pointer, the data structure will be automatically
        freed when the parent window is deleted */
 
-    new Label(window, "Arm Position", "sans-bold");
-    make_slider( window, "Start Arm Angle", 0.0, []( float slider ) { return std::to_string((int) (slider*90) ); }, "deg" );
-    make_slider( window, "Target Arm Angle",  1.0, []( float slider ) { return std::to_string((int) (slider*90) ); }, "deg" );
+    // Same lambdas to format text.
+    auto sliderToFloat= []( float slider, float scale ) 
+    {
+      std::stringstream stream;
+      stream << std::fixed << std::setprecision(1) << ( slider * scale );
+      return stream.str();
+    };
+    auto sliderToInt = []( float slider, int scale )
+    {
+      return std::to_string((int) ( slider * scale ));
+    };
+    auto sliderToDegrees = [sliderToInt]( float slider ) 
+    {
+      return sliderToInt( slider, 90 );
+    };
+    auto sliderTo1000ms = [sliderToInt]( float slider ) 
+    {
+      return sliderToInt( slider, 1000 );
+    };
+    auto sliderTo10s = [sliderToFloat]( float slider ) 
+    {
+      return sliderToFloat( slider, 10.0 );
+    };
+    auto sliderToPid = [sliderToFloat]( float slider ) {
+      return sliderToFloat( slider, 4.0 );
+    };
+
+    new Label(window, "Arm Start Position", "sans-bold");
+    make_slider( window, "Start Arm Angle", 0.0, sliderToDegrees, "deg" );
+    make_slider( window, "Target Arm Angle",  1.0, sliderToDegrees, "deg" );
+
+    new Label(window, "Arm Current Position", "sans-bold");
+    make_slider( window, "Arm Angle", 0.0, sliderToDegrees, "deg", true );
 
     new Label(window, "PID Settings", "sans-bold");
-    make_slider( window, "P", .5, []( float slider ) { return std::to_string((int) (slider*40 )); }, "" );
-    make_slider( window, "I", .5, []( float slider ) { return std::to_string((int) (slider*40 )); }, "" );
-    make_slider( window, "D", .5, []( float slider ) { return std::to_string((int) (slider*40 )); }, "" );
+    make_slider( window, "P", .5, sliderToPid, "");
+    make_slider( window, "I", .5, sliderToPid, "");
+    make_slider( window, "D", .5, sliderToPid, "");
 
     new Label(window, "Simulation Settings", "sans-bold");
-    make_slider( window, "Sensor Delay", .5, []( float slider ) { return std::to_string((int) (slider*40 )); }, "" );
+    make_slider( window, "Sensor Delay", .1, sliderTo1000ms, "ms" );
+    make_slider( window, "I Memory", .5, sliderTo10s, "s" );
+
+    new Label(window, "Simulation Control", "sans-bold" );
+
+    Widget *panel = new Widget(window);
+    panel->setLayout(new BoxLayout(Orientation::Horizontal,
+        Alignment::Middle, 0, 20));
+    Button* start= new Button( panel, "Start" );
+    start->setFlags( Button::ToggleButton );
+    Button* reset = new Button( panel, "Reset" );
 
     performLayout();
 
