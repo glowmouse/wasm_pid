@@ -42,6 +42,7 @@
 #include <cstdint>
 #include <memory>
 #include <utility>
+#include <chrono>
 
 #if defined(__GNUC__)
 #  pragma GCC diagnostic ignored "-Wmissing-field-initializers"
@@ -189,11 +190,21 @@ nanogui::TextBox* make_slider(
   return textBox;
 }
 
-class ExampleApplication : public nanogui::Screen {
+class PidSimFrontEnd: public nanogui::Screen {
 public:
-    ExampleApplication() : nanogui::Screen(Eigen::Vector2i(800, 600), "NanoGUI Test", /*resizable*/true, /*fullscreen*/false, /*colorBits*/8,
-                                /*alphaBits*/8, /*depthBits*/24, /*stencilBits*/8,
-                                /*nSamples*/0, /*glMajor*/3, /*glMinor*/0) 
+  PidSimFrontEnd() : 
+      nanogui::Screen(
+        Eigen::Vector2i(800, 600), 
+        "NanoGUI Test", 
+        /*resizable*/   true, 
+        /*fullscreen*/  false, 
+        /*colorBits*/   8,
+        /*alphaBits*/   8,
+        /*depthBits*/   24,
+        /*stencilBits*/ 8,
+        /*nSamples*/    0,
+        /*glMajor*/     3,
+        /*glMinor*/     0) 
   {
     using namespace nanogui;
     Window *window = new Window(this, "Robot Arm PID Simulator");
@@ -232,29 +243,30 @@ public:
     };
 
     new Label(window, "Arm Start Position", "sans-bold");
-    make_slider( window, "Start Arm Angle", 0.0, sliderToDegrees, "deg" );
-    make_slider( window, "Target Arm Angle",  1.0, sliderToDegrees, "deg" );
+    mAngleStart   = make_slider( window, "Start Arm Angle", 0.0, sliderToDegrees, "deg" );
+    mAngleTarget  = make_slider( window, "Target Arm Angle",  1.0, sliderToDegrees, "deg" );
 
     new Label(window, "Arm Current Position", "sans-bold");
-    make_slider( window, "Arm Angle", 0.0, sliderToDegrees, "deg", true );
+    mAngleCurrent = make_slider( window, "Arm Angle", 0.0, sliderToDegrees, "deg", true );
 
     new Label(window, "PID Settings", "sans-bold");
-    make_slider( window, "P", .5, sliderToPid, "");
-    make_slider( window, "I", .5, sliderToPid, "");
-    make_slider( window, "D", .5, sliderToPid, "");
+    mPID_P        = make_slider( window, "P", .5, sliderToPid, "");
+    mPID_I        = make_slider( window, "I", .5, sliderToPid, "");
+    mPID_D        = make_slider( window, "D", .5, sliderToPid, "");
 
     new Label(window, "Simulation Settings", "sans-bold");
-    make_slider( window, "Sensor Delay", .1, sliderTo1000ms, "ms" );
-    make_slider( window, "I Memory", .5, sliderTo10s, "s" );
+    mSensorDelay  = make_slider( window, "Sensor Delay", .1, sliderTo1000ms, "ms" );
+    mIMemory      = make_slider( window, "I Memory", .5, sliderTo10s, "s" );
 
     new Label(window, "Simulation Control", "sans-bold" );
 
     Widget *panel = new Widget(window);
     panel->setLayout(new BoxLayout(Orientation::Horizontal,
         Alignment::Middle, 0, 20));
-    Button* start= new Button( panel, "Start" );
-    start->setFlags( Button::ToggleButton );
-    Button* reset = new Button( panel, "Reset" );
+    mStart= new Button( panel, "Start" );
+    mStart->setFlags( Button::ToggleButton );
+    auto reset = new Button( panel, "Reset" );
+    reset->setCallback( [&] (void) { mReset =true; }); 
 
     Window *chartWindow = new Window(this, "PID Stats over Time");
     chartWindow->setPosition(Vector2i( mSize.x()/2, 15));
@@ -268,132 +280,210 @@ public:
        NanoGUI comes with a simple Eigen-based wrapper around OpenGL 3,
        which eliminates most of the tedious and error-prone shader and
        buffer object management.
-     */
+    */
 
-     mShader.init(
-            /* An identifying name */
-            "a_simple_shader",
+    mShader.init(
+        /* An identifying name */
+        "a_simple_shader",
 
-            /* Vertex shader */
-            "#version 300 es\n"
-            "#ifdef GL_ES\n"
-            " precision highp float;\n"
-            "#endif\n"
-            "uniform mat4 modelViewProj;\n"
-            "in vec3 position;\n"
-            "void main() {\n"
-            "    gl_Position = modelViewProj * vec4(position, 1.0);\n"
-            "}",
+        /* Vertex shader */
+        "#version 300 es\n"
+        "#ifdef GL_ES\n"
+        " precision highp float;\n"
+        "#endif\n"
+        "uniform mat4 modelViewProj;\n"
+        "in vec3 position;\n"
+        "void main() {\n"
+        "    gl_Position = modelViewProj * vec4(position, 1.0);\n"
+        "}",
 
-            /* Fragment shader */
-            "#version 300 es\n"
-            "#ifdef GL_ES\n"
-            " precision highp float;\n"
-            "#endif\n"
-            "out vec4 color;\n"
-            "uniform float intensity;\n"
-            "void main() {\n"
-            "    color = vec4(vec3(intensity), 1.0);\n"
-            "}"
-        );
+        /* Fragment shader */
+        "#version 300 es\n"
+        "#ifdef GL_ES\n"
+        " precision highp float;\n"
+        "#endif\n"
+        "out vec4 color;\n"
+        "uniform float intensity;\n"
+        "void main() {\n"
+        "    color = vec4(vec3(intensity), 1.0);\n"
+        "}"
+    );
 
-        MatrixXu indices(3, 2); /* Draw 2 triangles */
-        indices.col(0) << 0, 1, 2;
-        indices.col(1) << 2, 3, 0;
+    MatrixXu indices(3, 2); /* Draw 2 triangles */
+    indices.col(0) << 0, 1, 2;
+    indices.col(1) << 2, 3, 0;
 
-        MatrixXf positions(3, 4);
-        positions.col(0) << -1, -1, 0;
-        positions.col(1) <<  1, -1, 0;
-        positions.col(2) <<  1,  1, 0;
-        positions.col(3) << -1,  1, 0;
+    MatrixXf positions(3, 4);
+    positions.col(0) << -1, -1, 0;
+    positions.col(1) <<  1, -1, 0;
+    positions.col(2) <<  1,  1, 0;
+    positions.col(3) << -1,  1, 0;
 
-        mShader.bind();
-        mShader.uploadIndices(indices);
-        mShader.uploadAttrib("position", positions);
-        mShader.setUniform("intensity", 0.5f);
+    mShader.bind();
+    mShader.uploadIndices(indices);
+    mShader.uploadAttrib("position", positions);
+    mShader.setUniform("intensity", 0.5f);
 
+  }
+
+  ~PidSimFrontEnd() 
+  {
+    mShader.free();
+  }
+
+  virtual bool keyboardEvent(int key, int scancode, int action, int modifiers) 
+  {
+    if (Screen::keyboardEvent(key, scancode, action, modifiers))
+      return true;
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+		  std::cout<<"Exit(ESC) called"<<std::endl;
+      //setVisible(false);
+      return true;
     }
+    return false;
+  }
 
-    ~ExampleApplication() {
-        mShader.free();
-    }
+  virtual void draw(NVGcontext *ctx) {
+    /* Draw the user interface */
+    Screen::draw(ctx);
+  }
 
-    virtual bool keyboardEvent(int key, int scancode, int action, int modifiers) {
-        if (Screen::keyboardEvent(key, scancode, action, modifiers))
-            return true;
-        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-			std::cout<<"Exit(ESC) called"<<std::endl;
-            //setVisible(false);
-            return true;
-        }
-        return false;
-    }
+  virtual void drawContents() {
+    using namespace nanogui;
 
-    virtual void draw(NVGcontext *ctx) {
-        /* Animate the scrollbar */
-        mProgress->setValue(std::fmod((float) glfwGetTime() / 10, 1.0f));
+    /* Draw the window contents using OpenGL */
+    mShader.bind();
 
-        /* Draw the user interface */
-        Screen::draw(ctx);
-    }
+    Matrix4f mvp;
+    mvp.setIdentity();
+    mvp.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf((float) glfwGetTime(),  Vector3f::UnitZ())) * 0.25f;
+    mvp.row(0) *= (float) mSize.y() / (float) mSize.x();
 
-    virtual void drawContents() {
-        using namespace nanogui;
+    // Move to lower RHS.
+    mvp(0,3) += .5;
+    mvp(1,3) -= .5;
 
-        /* Draw the window contents using OpenGL */
-        mShader.bind();
+    mShader.setUniform("modelViewProj", mvp);
 
-        Matrix4f mvp;
-        mvp.setIdentity();
-        mvp.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf((float) glfwGetTime(),  Vector3f::UnitZ())) * 0.25f;
-        mvp.row(0) *= (float) mSize.y() / (float) mSize.x();
+    /* Draw 2 triangles starting at index 0 */
+    mShader.drawIndexed(GL_TRIANGLES, 0, 2);
+  }
 
+  bool isReset()
+  {
+    bool result = mReset;
+    mReset=false;
+    return result;
+  }
 
+  nanogui::TextBox&   angleCurrent() { return *mAngleCurrent; }
 
-        mvp(0,3) += .5;
-        mvp(1,3) -= .5;
-
-        mShader.setUniform("modelViewProj", mvp);
-
-        /* Draw 2 triangles starting at index 0 */
-        mShader.drawIndexed(GL_TRIANGLES, 0, 2);
-    }
 private:
-    nanogui::ProgressBar *mProgress;
-    nanogui::GLShader mShader;
-
-    using imagesDataType = vector<pair<GLTexture, GLTexture::handleType>>;
-    imagesDataType mImagesData;
-    int mCurrentImage;
+  bool                mReset = false;
+  nanogui::GLShader   mShader;
+  nanogui::TextBox*   mAngleTarget; 
+  nanogui::TextBox*   mAngleStart; 
+  nanogui::TextBox*   mAngleCurrent; 
+  nanogui::TextBox*   mPID_P; 
+  nanogui::TextBox*   mPID_I; 
+  nanogui::TextBox*   mPID_D; 
+  nanogui::TextBox*   mSensorDelay;
+  nanogui::TextBox*   mIMemory;
+  nanogui::Button*    mStart;
 };
 
+class PidSimBackEnd
+{
+  public:
+
+  PidSimBackEnd( nanogui::ref<PidSimFrontEnd> frontEnd ) : mfrontEnd{ frontEnd }
+  {}
+
+  void update( std::chrono::duration<double> delta )
+  {
+    double intervalSeconds= delta.count();
+    int lastTicks= (int) (time * 50);
+    time += intervalSeconds;
+    int curTicks= (int) (time * 50);
+    int ticksDiff = curTicks - lastTicks;
+    for ( int i = 0; i < ticksDiff; ++i ) {
+      updateOneTick();
+    }
+  } 
+ 
+  private:
+
+  void reset()
+  {
+    mAngle = 90;
+    mAngleVel= 0;
+  }
+
+  void updateOneTick()
+  {
+    if ( mfrontEnd->isReset() ) {
+      reset();
+    }
+    double mRadAngle = ( mAngle - 90 ) / 180 * M_PI;
+    double AngleAccel= -cos( mRadAngle ) * .01;
+    mAngleVel += AngleAccel;
+    mAngleVel *= .999; // damping
+    mAngle += mAngleVel;
+
+    updateFrontEnd();
+  }
+
+  void updateFrontEnd()
+  {
+    mfrontEnd->angleCurrent().setValue( std::to_string((int) mAngle ));
+  }
+
+  double time = 0.0f;
+  double mAngle = 0;
+  double mAngleVel = 0;
+
+  nanogui::ref<PidSimFrontEnd> mfrontEnd;
+};
+
+std::unique_ptr<PidSimBackEnd> backEndSingleton;
+
 static std::chrono::high_resolution_clock::time_point lastFpsTime;
+static std::chrono::high_resolution_clock::time_point lastTickTime;
 double frameRateSmoothing = 1.0;
 double numFrames = 0;
 
 void mainloop(){
 	std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>> (std::chrono::high_resolution_clock::now() - lastFpsTime);
+  std::chrono::high_resolution_clock::time_point timeNow = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> backDelta = std::chrono::duration_cast<std::chrono::duration<double>> (timeNow - lastTickTime );
+  lastTickTime = timeNow;
+
 	numFrames++;
 	if (delta.count() > frameRateSmoothing) {
-        fps = (int) (numFrames / delta.count());
-        fpscapt->setValue(std::to_string((int) (fps)));
-        numFrames = 0;
-        lastFpsTime = std::chrono::high_resolution_clock::now();
-    }
+    fps = (int) (numFrames / delta.count());
+    fpscapt->setValue(std::to_string((int) (fps)));
+    numFrames = 0;
+    lastFpsTime = std::chrono::high_resolution_clock::now();
+  }
 
+  backEndSingleton->update( backDelta ); 
 	nanogui::mainloop();
 }
 
 int main(int /* argc */, char ** /* argv */) {
     try {
         nanogui::init();
-        /* scoped variables */ {
-            nanogui::ref<ExampleApplication> app = new ExampleApplication();
-            app->drawAll();
-            app->setVisible(true);
-            emscripten_set_main_loop(mainloop, 0,1);
+        {
+          //
+          // Note - ref is a custom shared pointer.  The reference
+          // count is integrated into nanogui's object.
+          //
+          nanogui::ref<PidSimFrontEnd> pidSimFrontEnd = new PidSimFrontEnd();
+          backEndSingleton = std::make_unique<PidSimBackEnd>( pidSimFrontEnd );
+          pidSimFrontEnd->drawAll();
+          pidSimFrontEnd->setVisible(true);
+          emscripten_set_main_loop(mainloop, 0,1);
         }
-
         nanogui::shutdown();
     } catch (const std::runtime_error &e) {
         std::string error_msg = std::string("Caught a fatal error: ") + std::string(e.what());
