@@ -309,6 +309,7 @@ public:
         "}"
     );
 
+#ifdef LATER
     MatrixXu indices(3, 2); /* Draw 2 triangles */
     indices.col(0) << 0, 1, 2;
     indices.col(1) << 2, 3, 0;
@@ -318,6 +319,8 @@ public:
     positions.col(1) <<  1, -1, 0;
     positions.col(2) <<  1,  1, 0;
     positions.col(3) << -1,  1, 0;
+#endif
+#include "test.h"
 
     mShader.bind();
     mShader.uploadIndices(indices);
@@ -356,7 +359,7 @@ public:
 
     Matrix4f mvp;
     mvp.setIdentity();
-    mvp.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf((float) glfwGetTime(),  Vector3f::UnitZ())) * 0.25f;
+    mvp.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf((float) glfwGetTime(),  Vector3f::UnitX())) * 0.02;
     mvp.row(0) *= (float) mSize.y() / (float) mSize.x();
 
     // Move to lower RHS.
@@ -366,7 +369,7 @@ public:
     mShader.setUniform("modelViewProj", mvp);
 
     /* Draw 2 triangles starting at index 0 */
-    mShader.drawIndexed(GL_TRIANGLES, 0, 2);
+    mShader.drawIndexed(GL_TRIANGLES, 0, 335);
   }
 
   bool isReset()
