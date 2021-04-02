@@ -37,6 +37,7 @@
 #include <iomanip>
 #include <string>
 #include <emscripten.h>
+#include "model.h"  // auto generated code.
 
 // Includes for the GLTexture class.
 #include <cstdint>
@@ -206,6 +207,7 @@ public:
         /*glMajor*/     3,
         /*glMinor*/     0) 
   {
+    base_initModel();
     using namespace nanogui;
     Window *window = new Window(this, "Robot Arm PID Simulator");
     window->setPosition(Vector2i(15, 15));
@@ -316,30 +318,6 @@ public:
         "}"
     );
 
-//#define SIMPLE_TEST_MODE
-#ifdef SIMPLE_TEST_MODE
-    #define TRIANGLES 2
-
-    MatrixXu indices(3, TRIANGLES); /* Draw 2 triangles */
-    indices.col(0) << 0, 1, 2;
-    indices.col(1) << 2, 3, 0;
-
-    MatrixXf positions(3, 4);
-    positions.col(0) << -10.0, -10.0, 0.0; //, 1.0, 1.0;
-    positions.col(1) <<  10.0, -10.0, 0.0; //, 1.0, 1.0;
-    positions.col(2) <<  10.0,  10.0, 0.0; //, 1.0, 1.0;
-    positions.col(3) << -10.0,  10.0, 0.0; //, 1.0, 1.0;
-
-    MatrixXf normals(3, 4);
-    normals.col(0) <<  0.0,  0.0, 1.0;
-    normals.col(1) <<  0.0,  0.0, 1.0;
-    normals.col(2) <<  0.0,  0.0, 1.0;
-    normals.col(3) <<  0.0,  0.0, 1.0;
-
-#else
-#include "test.h"
-#endif
-
     Matrix4f light;
     light.col(0) <<  0.5,  0.5, 0.5, 0.0;
     light.col(1) <<  0.5,  0.5, 0.5, 0.0;
@@ -347,9 +325,9 @@ public:
     light.col(3) <<  0.0,  0.0, 0.0, 0.0;
 
     mShader.bind();
-    mShader.uploadIndices(indices);
-    mShader.uploadAttrib("position", positions);
-    mShader.uploadAttrib("normal", normals );
+    mShader.uploadIndices(base_indices);
+    mShader.uploadAttrib("position", base_positions);
+    mShader.uploadAttrib("normal", base_normals );
     mShader.setUniform("intensity", 1.0);
     mShader.setUniform("lightdir", light);
 
@@ -389,8 +367,8 @@ public:
 
     Matrix4f camera;
     camera.setIdentity();
-    camera.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf(-M_PI/4,  Vector3f::UnitX()));
-    camera(1,3) -= 15;
+    camera.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf(-M_PI/2 - M_PI/6,  Vector3f::UnitX()));
+    camera(1,3) -= 10;
 
     Matrix4f projection;
     projection.setIdentity();
@@ -408,7 +386,7 @@ public:
     mShader.setUniform("orientation", orientation);
 
     /* Draw 2 triangles starting at index 0 */
-    mShader.drawIndexed(GL_TRIANGLES, 0, TRIANGLES);
+    mShader.drawIndexed(GL_TRIANGLES, 0, base_TRIANGLES);
   }
 
   bool isReset()

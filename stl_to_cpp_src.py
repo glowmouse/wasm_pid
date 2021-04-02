@@ -110,29 +110,51 @@ class STLModel:
     assert re.search( r"^\s+endfacet$", next( lineSource ))
     return Triangle( self.getId(v0), self.getId(v1), self.getId(v2) )
 
-  def dump(self):
-    print("#define TRIANGLES " + str( len(self.triangles) ) + "\n" )
-    print("    MatrixXu indices(3, " + str( len(self.triangles) ) + ");" )
+  def dump(self, prefix, cpp_file, h_file ):
+    print("#include <nanogui/common.h>", file=h_file )
+    print("using namespace nanogui;", file=h_file )
+    print("#include <nanogui/common.h>", file=cpp_file)
+    print("using namespace nanogui;", file=cpp_file )
+
+    print("#define %sTRIANGLES %d" % (prefix, len(self.triangles)), file=h_file )
+
+    print("extern MatrixXu %sindices;" % (prefix), file=h_file)
+    print("MatrixXu %sindices(3, %d);" % (prefix, len(self.triangles)),         file=cpp_file)
+
+    print("extern MatrixXf %spositions;" % (prefix), file=h_file )
+    print("MatrixXf %spositions(3, %d);" % (prefix, self.maxId),        file=cpp_file )
+
+    print("extern MatrixXf %snormals;" % (prefix), file=h_file )
+    print("MatrixXf %snormals(3, %d);" % (prefix, self.maxId), file=cpp_file )
+
+    print("", file=cpp_file)
+    print("void %sinitModel() {" % prefix, file=cpp_file)
+    print("", file=h_file)
+    print("extern void %sinitModel();" % prefix ,file=h_file)
+
     index = 0;
     for triangle in self.triangles:
-      print("    indices.col(%d) << %d,%d,%d;" % (index,triangle.v0,triangle.v1,triangle.v2))
+      print("   %sindices.col(%d) << %d,%d,%d;" % (prefix, index,triangle.v0,triangle.v1,triangle.v2), file=cpp_file)
       index+=1
 
-    print("    MatrixXf positions(3, " + str(self.maxId) +");" ) 
     index = 0;
     for vector in self.vectors:
-      print("    positions.col(%d) << %f,%f,%f;" % ( index, vector.x, vector.y, vector.z) )
+      print("   %spositions.col(%d) << %f,%f,%f;" % ( prefix, index, vector.x, vector.y, vector.z), file=cpp_file )
       index+=1
 
-    print("    MatrixXf normals(3, " + str(self.maxId) +");" ) 
     index = 0;
     for vector in self.vectors:
-      print("    normals.col(%d) << %f,%f,%f;" % ( index, vector.nx, vector.ny, vector.nz) )
+      print("   %snormals.col(%d) << %f,%f,%f;" % ( prefix, index, vector.nx, vector.ny, vector.nz), file=cpp_file  )
       index+=1
+    print("}\n\n", file=cpp_file )
+  
 
-file = open('arm_base.stl', 'r' )
-lineSource = LinesWithPutBack( file )
+stl_file = open('arm_base.stl', 'r' )
+cpp_file = open('model.cpp', 'wt' )
+h_file = open('model.h', 'wt' )
+lineSource = LinesWithPutBack( stl_file )
 model = STLModel()
 model.parseASCIIStl( lineSource )
-model.dump()
+model.dump( "base_", cpp_file, h_file )
+
 
