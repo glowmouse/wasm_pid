@@ -291,10 +291,15 @@ public:
         "#ifdef GL_ES\n"
         " precision highp float;\n"
         "#endif\n"
-        "uniform mat4 modelViewProj;\n"
+        "uniform mat4 camera;\n"
+        "uniform mat4 orientation;\n"
+        "uniform mat4 projection;\n"
+        "in vec3 normal;\n"
         "in vec3 position;\n"
+        "out vec4 tnormal;\n"
         "void main() {\n"
-        "    gl_Position = modelViewProj * vec4(position, 1.0);\n"
+        "    gl_Position = projection * camera * orientation * vec4(position, 1.0);\n"
+        "    tnormal = orientation * vec4( normal, 1.0 );\n"
         "}",
 
         /* Fragment shader */
@@ -303,29 +308,50 @@ public:
         " precision highp float;\n"
         "#endif\n"
         "out vec4 color;\n"
+        "in vec4 tnormal;\n"
+        "uniform mat4 lightdir;\n"
         "uniform float intensity;\n"
         "void main() {\n"
-        "    color = vec4(vec3(intensity), 1.0);\n"
+        "    color = lightdir * tnormal;\n"
         "}"
     );
 
-#ifdef LATER
-    MatrixXu indices(3, 2); /* Draw 2 triangles */
+//#define SIMPLE_TEST_MODE
+#ifdef SIMPLE_TEST_MODE
+    #define TRIANGLES 2
+
+    MatrixXu indices(3, TRIANGLES); /* Draw 2 triangles */
     indices.col(0) << 0, 1, 2;
     indices.col(1) << 2, 3, 0;
 
     MatrixXf positions(3, 4);
-    positions.col(0) << -1, -1, 0;
-    positions.col(1) <<  1, -1, 0;
-    positions.col(2) <<  1,  1, 0;
-    positions.col(3) << -1,  1, 0;
-#endif
+    positions.col(0) << -10.0, -10.0, 0.0; //, 1.0, 1.0;
+    positions.col(1) <<  10.0, -10.0, 0.0; //, 1.0, 1.0;
+    positions.col(2) <<  10.0,  10.0, 0.0; //, 1.0, 1.0;
+    positions.col(3) << -10.0,  10.0, 0.0; //, 1.0, 1.0;
+
+    MatrixXf normals(3, 4);
+    normals.col(0) <<  0.0,  0.0, 1.0;
+    normals.col(1) <<  0.0,  0.0, 1.0;
+    normals.col(2) <<  0.0,  0.0, 1.0;
+    normals.col(3) <<  0.0,  0.0, 1.0;
+
+#else
 #include "test.h"
+#endif
+
+    Matrix4f light;
+    light.col(0) <<  0.5,  0.5, 0.5, 0.0;
+    light.col(1) <<  0.5,  0.5, 0.5, 0.0;
+    light.col(2) <<  0.5,  0.5, 0.5, 0.0;
+    light.col(3) <<  0.0,  0.0, 0.0, 0.0;
 
     mShader.bind();
     mShader.uploadIndices(indices);
     mShader.uploadAttrib("position", positions);
-    mShader.setUniform("intensity", 0.5f);
+    mShader.uploadAttrib("normal", normals );
+    mShader.setUniform("intensity", 1.0);
+    mShader.setUniform("lightdir", light);
 
   }
 
@@ -357,19 +383,32 @@ public:
     /* Draw the window contents using OpenGL */
     mShader.bind();
 
-    Matrix4f mvp;
-    mvp.setIdentity();
-    mvp.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf((float) glfwGetTime(),  Vector3f::UnitX())) * 0.02;
-    mvp.row(0) *= (float) mSize.y() / (float) mSize.x();
+    Matrix4f orientation;
+    orientation.setIdentity();
+    orientation.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf((float) glfwGetTime(),  Vector3f::UnitZ()));
+
+    Matrix4f camera;
+    camera.setIdentity();
+    camera.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf(-M_PI/4,  Vector3f::UnitX()));
+    camera(1,3) -= 15;
+
+    Matrix4f projection;
+    projection.setIdentity();
+    projection.row(0) *= (float) mSize.y() / (float) mSize.x();
+    projection.row(0) *= .02;
+    projection.row(1) *= .02;
+    projection.row(2) *= .02;
 
     // Move to lower RHS.
-    mvp(0,3) += .5;
-    mvp(1,3) -= .5;
+    projection(0,3) += .5;
+    projection(1,3) -= .5;
 
-    mShader.setUniform("modelViewProj", mvp);
+    mShader.setUniform("projection", projection);
+    mShader.setUniform("camera", camera);
+    mShader.setUniform("orientation", orientation);
 
     /* Draw 2 triangles starting at index 0 */
-    mShader.drawIndexed(GL_TRIANGLES, 0, 335);
+    mShader.drawIndexed(GL_TRIANGLES, 0, TRIANGLES);
   }
 
   bool isReset()
