@@ -272,7 +272,7 @@ public:
 
     Window *chartWindow = new Window(this, "PID Stats over Time");
     chartWindow->setPosition(Vector2i( mSize.x()/2, 15));
-    chartWindow->setFixedSize(Vector2i( mSize.x()/2-15, mSize.y()/2 ));
+    chartWindow->setFixedSize(Vector2i( mSize.x()/2-15, mSize.y()/2-30 ));
 
     performLayout();
 
@@ -302,6 +302,7 @@ public:
         "void main() {\n"
         "    gl_Position = projection * camera * orientation * vec4(position, 1.0);\n"
         "    tnormal = orientation * vec4( normal, 1.0 );\n"
+        //"    tnormal = gl_Position* .01; \n"
         "}",
 
         /* Fragment shader */
@@ -315,14 +316,15 @@ public:
         "uniform float intensity;\n"
         "void main() {\n"
         "    color = lightdir * tnormal;\n"
+        //"    color = vec4( tnormal.z, tnormal.z, tnormal.z, 1);\n"
         "}"
     );
 
     Matrix4f light;
-    light.col(0) <<  0.5,  0.5, 0.5, 0.0;
+    light.col(0) <<  0.1,  0.1, 0.1, 0.0;
     light.col(1) <<  0.5,  0.5, 0.5, 0.0;
-    light.col(2) <<  0.5,  0.5, 0.5, 0.0;
-    light.col(3) <<  0.0,  0.0, 0.0, 0.0;
+    light.col(2) <<  1.5,  1.5, 1.5, 0.0;
+    light.col(3) <<  0.0,  0.0, 0.0, 1.0;
 
     mShader.bind();
     mShader.uploadIndices(base_indices);
@@ -367,25 +369,34 @@ public:
 
     Matrix4f camera;
     camera.setIdentity();
-    camera.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf(-M_PI/2 - M_PI/6,  Vector3f::UnitX()));
-    camera(1,3) -= 10;
+    camera.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf(-M_PI/2 + M_PI/8,  Vector3f::UnitX()));
+    camera(1,3) = -10;
+    camera(2,3) = -50;
+
+    double aspect = (double) mSize.x() / (double) mSize.y();
+    double fov = M_PI/4;   // 60 degrees
+    double near = 1;
+    double far = 400;
 
     Matrix4f projection;
     projection.setIdentity();
-    projection.row(0) *= (float) mSize.y() / (float) mSize.x();
-    projection.row(0) *= .02;
-    projection.row(1) *= .02;
-    projection.row(2) *= .02;
-
-    // Move to lower RHS.
-    projection(0,3) += .5;
-    projection(1,3) -= .5;
+    projection(0,0) = near/ ( aspect * tan(fov/2));
+    projection(1,1) = near/ ( tan(fov/2));
+    projection(2,2) = -(far+near)   / (far-near);
+    projection(3,2) =  (-2*far*near)/ (far-near);
+    projection(2,3) = -1;
+    projection(3,3) = 0;
 
     mShader.setUniform("projection", projection);
     mShader.setUniform("camera", camera);
     mShader.setUniform("orientation", orientation);
 
-    /* Draw 2 triangles starting at index 0 */
+    glViewport( 
+      mSize.x()/2, 0,
+      mSize.x()/2, mSize.y()/2 );
+    glEnable( GL_DEPTH_TEST );
+    glDepthFunc( GL_LESS );
+
     mShader.drawIndexed(GL_TRIANGLES, 0, base_TRIANGLES);
   }
 
