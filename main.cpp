@@ -197,15 +197,15 @@ R"(#version 300 es
 #ifdef GL_ES
   precision highp float;
 #endif
-uniform mat4 PREFIX_camera;
-uniform mat4 PREFIX_orientation;
-uniform mat4 PREFIX_projection;
-in vec3 PREFIX_normal;
+uniform mat4 camera;
+uniform mat4 orientation;
+uniform mat4 projection;
+in vec3 normal;
 in vec3 PREFIX_position;
 out vec4 tnormal;
 void main() {
-  gl_Position = PREFIX_projection * PREFIX_camera * PREFIX_orientation * vec4(PREFIX_position, 1.0);
-  tnormal = PREFIX_orientation * vec4( PREFIX_normal, 1.0 );
+  gl_Position = projection * camera * orientation * vec4(PREFIX_position, 1.0);
+  tnormal = orientation * vec4( normal, 1.0 );
 }
 
 )";
@@ -334,7 +334,7 @@ public:
   
     mBaseShader.init( "baseShader", 
       find_and_replace( baseVertexShader   , "PREFIX_", ""),
-      find_and_replace(  baseFragmentShader, "PREFIX_", "BASE_" )
+      find_and_replace(  baseFragmentShader, "PREFIX_", "" )
     );
 
 #ifdef ADD_ARM
@@ -351,7 +351,7 @@ public:
     mBaseShader.uploadIndices(base_indices);
     mBaseShader.uploadAttrib("position", base_positions);
     mBaseShader.uploadAttrib("normal", base_normals );
-    mBaseShader.setUniform("BASE_lightdir", light);
+    mBaseShader.setUniform("lightdir", light);
 
 #ifdef ADD_ARM
     mArmShader.bind();
