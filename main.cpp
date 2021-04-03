@@ -283,11 +283,8 @@ public:
        which eliminates most of the tedious and error-prone shader and
        buffer object management.
     */
-
-    mShader.init(
-        /* An identifying name */
-        "a_simple_shader",
-
+  
+    std::string baseVertexShader =
         /* Vertex shader */
         "#version 300 es\n"
         "#ifdef GL_ES\n"
@@ -303,8 +300,9 @@ public:
         "    gl_Position = projection * camera * orientation * vec4(position, 1.0);\n"
         "    tnormal = orientation * vec4( normal, 1.0 );\n"
         //"    tnormal = gl_Position* .01; \n"
-        "}",
+        "}";
 
+      std::string baseFragmentShader =
         /* Fragment shader */
         "#version 300 es\n"
         "#ifdef GL_ES\n"
@@ -317,8 +315,9 @@ public:
         "void main() {\n"
         "    color = lightdir * tnormal;\n"
         //"    color = vec4( tnormal.z, tnormal.z, tnormal.z, 1);\n"
-        "}"
-    );
+        "}";
+
+    mShader.init( "a_simple_shader", baseVertexShader, baseFragmentShader );
 
     Matrix4f light;
     light.col(0) <<  0.1,  0.1, 0.1, 0.0;

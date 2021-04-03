@@ -149,12 +149,15 @@ class STLModel:
     print("}\n\n", file=cpp_file )
   
 
-stl_file = open('arm_base.stl', 'r' )
+def convertStlFile( stl_file_name, prefix, cpp_file, h_file ):
+  stl_file = open( stl_file_name , 'r' )
+  stl_file_lineSource = LinesWithPutBack( stl_file )
+  model = STLModel()
+  model.parseASCIIStl( stl_file_lineSource ) 
+  model.dump( prefix, cpp_file, h_file )
+
 cpp_file = open('model.cpp', 'wt' )
 h_file = open('model.h', 'wt' )
-lineSource = LinesWithPutBack( stl_file )
-model = STLModel()
-model.parseASCIIStl( lineSource )
-model.dump( "base_", cpp_file, h_file )
-
+convertStlFile( "arm_base.stl", "base_", cpp_file, h_file )
+convertStlFile( "arm_arm.stl", "arm_", cpp_file, h_file )
 
