@@ -284,38 +284,39 @@ public:
        buffer object management.
     */
   
-    std::string baseVertexShader =
-        /* Vertex shader */
-        "#version 300 es\n"
-        "#ifdef GL_ES\n"
-        " precision highp float;\n"
-        "#endif\n"
-        "uniform mat4 camera;\n"
-        "uniform mat4 orientation;\n"
-        "uniform mat4 projection;\n"
-        "in vec3 normal;\n"
-        "in vec3 position;\n"
-        "out vec4 tnormal;\n"
-        "void main() {\n"
-        "    gl_Position = projection * camera * orientation * vec4(position, 1.0);\n"
-        "    tnormal = orientation * vec4( normal, 1.0 );\n"
-        //"    tnormal = gl_Position* .01; \n"
-        "}";
+    /* Vertex shader */
+    std::string baseVertexShader = 
+R"(#version 300 es
+#ifdef GL_ES
+  precision highp float;
+#endif
+uniform mat4 camera;
+uniform mat4 orientation;
+uniform mat4 projection;
+in vec3 normal;
+in vec3 position;
+out vec4 tnormal;
+void main() {
+  gl_Position = projection * camera * orientation * vec4(position, 1.0);
+  tnormal = orientation * vec4( normal, 1.0 );
+}
 
-      std::string baseFragmentShader =
+)";
+
         /* Fragment shader */
-        "#version 300 es\n"
-        "#ifdef GL_ES\n"
-        " precision highp float;\n"
-        "#endif\n"
-        "out vec4 color;\n"
-        "in vec4 tnormal;\n"
-        "uniform mat4 lightdir;\n"
-        "uniform float intensity;\n"
-        "void main() {\n"
-        "    color = lightdir * tnormal;\n"
-        //"    color = vec4( tnormal.z, tnormal.z, tnormal.z, 1);\n"
-        "}";
+  std::string baseFragmentShader =
+R"(#version 300 es
+#ifdef GL_ES
+  precision highp float;
+#endif
+out vec4 color;
+in vec4 tnormal;
+uniform mat4 lightdir;
+uniform float intensity;
+void main() {
+  color = lightdir * tnormal;
+}
+)";
 
     mShader.init( "a_simple_shader", baseVertexShader, baseFragmentShader );
 
