@@ -201,13 +201,14 @@ R"(#version 300 es
   precision highp float;
 #endif
 uniform mat4 camera;
+uniform mat4 model;
 uniform mat4 orientation;
 uniform mat4 projection;
 in vec3 normal;
 in vec3 position;
 out vec4 tnormal;
 void main() {
-  gl_Position = projection * camera * orientation * vec4(position, 1.0);
+  gl_Position = projection * camera * model * vec4(position, 1.0);
   tnormal = orientation * vec4( normal, 1.0 );
 }
 
@@ -323,9 +324,9 @@ public:
     mShader.init( "shader", vertexShader, fragmentShader ); 
 
     Matrix4f light;
-    light.col(0) <<  0.1,  0.1, 0.1, 0.0;
-    light.col(1) <<  0.5,  0.5, 0.5, 0.0;
-    light.col(2) <<  1.5,  1.5, 1.5, 0.0;
+    light.col(0) <<  0.5,  0.5, 0.5, 0.0;
+    light.col(1) <<  -0.5,  -0.5, -0.5, 0.0;
+    light.col(2) <<  .5,  .5, .5, 0.0;
     light.col(3) <<  0.0,  0.0, 0.0, 1.0;
 
     mShader.bind();
@@ -360,20 +361,31 @@ public:
   virtual void drawContents() {
     using namespace nanogui;
 
+    double angleRad = -mArmAngle + M_PI;
+
     Matrix4f baseModel;
     baseModel.setIdentity();
     baseModel.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf((float) glfwGetTime(),  Vector3f::UnitZ()));
+    Matrix4f baseOrientation;
+    baseOrientation.setIdentity();
+    baseOrientation.topLeftCorner<3,3>() = baseModel.topLeftCorner<3,3>();
 
-    Matrix4f armModel;
-    armModel.setIdentity();
-    armModel.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf((float) glfwGetTime(),  Vector3f::UnitZ()));
-    armModel(2,3) = 20;
+    Matrix4f armLocal;
+    armLocal.setIdentity();
+    armLocal.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf(angleRad,  Vector3f::UnitY()));
+    armLocal(0,3) = 10.6066;    // X Join Point
+    armLocal(1,3) = 0;          // Y Join Point
+    armLocal(2,3) = 25.6066;    // Z Join Point
+    Matrix4f armModel = baseModel * armLocal;
+    Matrix4f armOrientation;
+    armOrientation.setIdentity();
+    armOrientation.topLeftCorner<3,3>() = armModel.topLeftCorner<3,3>();
 
     Matrix4f camera;
     camera.setIdentity();
     camera.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf(-M_PI/2 + M_PI/8,  Vector3f::UnitX()));
-    camera(1,3) = -10;
-    camera(2,3) = -50;
+    camera(1,3) = -15;
+    camera(2,3) = -40;
 
     double aspect = (double) mSize.x() / (double) mSize.y();
     double fov = M_PI/4;   // 60 degrees
@@ -399,13 +411,15 @@ public:
     mShader.bind();
     mShader.setUniform("projection", projection);
     mShader.setUniform("camera", camera);
-    mShader.setUniform("orientation", baseModel );
+    mShader.setUniform("orientation", baseOrientation );
+    mShader.setUniform("model", baseModel );
     mShader.drawIndexed(GL_TRIANGLES, base_TRIANGLE_START, base_TRIANGLE_END);
 
     mShader.bind();
     mShader.setUniform("projection", projection);
     mShader.setUniform("camera", camera);
-    mShader.setUniform("orientation", armModel );
+    mShader.setUniform("orientation", armOrientation );
+    mShader.setUniform("model", armModel );
     mShader.drawIndexed(GL_TRIANGLES, arm_TRIANGLE_START, arm_TRIANGLE_END - arm_TRIANGLE_START );
   }
 
@@ -416,9 +430,14 @@ public:
     return result;
   }
 
-  nanogui::TextBox&   angleCurrent() { return *mAngleCurrent; }
+  void setArmAngle( int angle ) {
+    mAngleCurrent->setValue( std::to_string( angle ));
+    double angleDegrees = angle;
+    mArmAngle = angleDegrees / 180.0 * M_PI;
+  }
 
 private:
+  double              mArmAngle = 0.0;
   bool                mReset = false;
   nanogui::GLShader   mShader;
   nanogui::TextBox*   mAngleTarget; 
@@ -469,13 +488,17 @@ class PidSimBackEnd
     mAngleVel += AngleAccel;
     mAngleVel *= .999; // damping
     mAngle += mAngleVel;
+    if ( mAngle < -30 ) {
+      mAngle = -30;
+      mAngleVel = 0.0f;   // Hit the bottom of the holder arm
+    }
 
     updateFrontEnd();
   }
 
   void updateFrontEnd()
   {
-    mfrontEnd->angleCurrent().setValue( std::to_string((int) mAngle ));
+    mfrontEnd->setArmAngle( mAngle );
   }
 
   double time = 0.0f;
