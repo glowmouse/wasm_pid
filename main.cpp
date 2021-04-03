@@ -202,10 +202,10 @@ uniform mat4 PREFIX_orientation;
 uniform mat4 PREFIX_projection;
 in vec3 PREFIX_normal;
 in vec3 PREFIX_position;
-out vec4 PREFIX_tnormal;
+out vec4 tnormal;
 void main() {
   gl_Position = PREFIX_projection * PREFIX_camera * PREFIX_orientation * vec4(PREFIX_position, 1.0);
-  PREFIX_tnormal = PREFIX_orientation * vec4( PREFIX_normal, 1.0 );
+  tnormal = PREFIX_orientation * vec4( PREFIX_normal, 1.0 );
 }
 
 )";
@@ -217,10 +217,10 @@ R"(#version 300 es
   precision highp float;
 #endif
 out vec4 color;
-in vec4 PREFIX_tnormal;
+in vec4 tnormal;
 uniform mat4 PREFIX_lightdir;
 void main() {
-  color = PREFIX_lightdir * PREFIX_tnormal;
+  color = PREFIX_lightdir * tnormal;
 }
 )";
 
@@ -334,7 +334,7 @@ public:
   
     mBaseShader.init( "baseShader", 
       find_and_replace( baseVertexShader   , "PREFIX_", ""),
-      find_and_replace(  baseFragmentShader, "PREFIX_", "" )
+      find_and_replace(  baseFragmentShader, "PREFIX_", "BASE_" )
     );
 
 #ifdef ADD_ARM
@@ -351,7 +351,7 @@ public:
     mBaseShader.uploadIndices(base_indices);
     mBaseShader.uploadAttrib("position", base_positions);
     mBaseShader.uploadAttrib("normal", base_normals );
-    mBaseShader.setUniform("lightdir", light);
+    mBaseShader.setUniform("BASE_lightdir", light);
 
 #ifdef ADD_ARM
     mArmShader.bind();
