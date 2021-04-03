@@ -1,16 +1,11 @@
+#define base_TRIANGLE_START 0
+#define base_TRIANGLE_END 336
+#define arm_TRIANGLE_START 336
+#define arm_TRIANGLE_END 380
 #include <nanogui/common.h>
 using namespace nanogui;
-#define base_TRIANGLES 336
-extern MatrixXu base_indices;
-extern MatrixXf base_positions;
-extern MatrixXf base_normals;
+extern MatrixXu indices;
+extern MatrixXf positions;
+extern MatrixXf normals;
 
-extern void base_initModel();
-#include <nanogui/common.h>
-using namespace nanogui;
-#define arm_TRIANGLES 44
-extern MatrixXu arm_indices;
-extern MatrixXf arm_positions;
-extern MatrixXf arm_normals;
-
-extern void arm_initModel();
+extern void initModel();

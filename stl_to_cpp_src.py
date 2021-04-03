@@ -72,6 +72,9 @@ class STLModel:
 
     return index
 
+  def currentTriangles( self ):
+    return len(self.triangles);
+
   def parseASCIIStl( self, lineSource ):
     header = next(lineSource);
     assert header.find("solid", 0 ) == 0
@@ -116,8 +119,6 @@ class STLModel:
     print("#include <nanogui/common.h>", file=cpp_file)
     print("using namespace nanogui;", file=cpp_file )
 
-    print("#define %sTRIANGLES %d" % (prefix, len(self.triangles)), file=h_file )
-
     print("extern MatrixXu %sindices;" % (prefix), file=h_file)
     print("MatrixXu %sindices(3, %d);" % (prefix, len(self.triangles)),         file=cpp_file)
 
@@ -149,15 +150,17 @@ class STLModel:
     print("}\n\n", file=cpp_file )
   
 
-def convertStlFile( stl_file_name, prefix, cpp_file, h_file ):
+def readSTLFile( stl_file_name, model, prefix, h_file ):
   stl_file = open( stl_file_name , 'r' )
   stl_file_lineSource = LinesWithPutBack( stl_file )
-  model = STLModel()
+  print( "#define %s_TRIANGLE_START %d" % (prefix, model.currentTriangles()), file=h_file )
   model.parseASCIIStl( stl_file_lineSource ) 
-  model.dump( prefix, cpp_file, h_file )
+  print( "#define %s_TRIANGLE_END %d" % (prefix, model.currentTriangles()), file=h_file )
 
 cpp_file = open('model.cpp', 'wt' )
 h_file = open('model.h', 'wt' )
-convertStlFile( "arm_base.stl", "base_", cpp_file, h_file )
-convertStlFile( "arm_arm.stl", "arm_", cpp_file, h_file )
+model = STLModel()
+readSTLFile( "arm_base.stl", model, "base", h_file )
+readSTLFile( "arm_arm.stl", model, "arm", h_file )
+model.dump( "", cpp_file, h_file )
 

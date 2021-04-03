@@ -191,8 +191,11 @@ nanogui::TextBox* make_slider(
   return textBox;
 }
 
-/* Vertex shader */
-const std::string baseVertexShader = 
+// Vertex shader 
+//
+// Note, normal calculation is busted.  Cannot include position
+// 
+const std::string vertexShader = 
 R"(#version 300 es
 #ifdef GL_ES
   precision highp float;
@@ -201,42 +204,28 @@ uniform mat4 camera;
 uniform mat4 orientation;
 uniform mat4 projection;
 in vec3 normal;
-in vec3 PREFIX_position;
+in vec3 position;
 out vec4 tnormal;
 void main() {
-  gl_Position = projection * camera * orientation * vec4(PREFIX_position, 1.0);
+  gl_Position = projection * camera * orientation * vec4(position, 1.0);
   tnormal = orientation * vec4( normal, 1.0 );
 }
 
 )";
 
 /* Fragment shader */
-const std::string baseFragmentShader =
+const std::string fragmentShader =
 R"(#version 300 es
 #ifdef GL_ES
   precision highp float;
 #endif
 out vec4 color;
 in vec4 tnormal;
-uniform mat4 PREFIX_lightdir;
+uniform mat4 lightdir;
 void main() {
-  color = PREFIX_lightdir * tnormal;
+  color = lightdir * tnormal;
 }
 )";
-
-std::string find_and_replace( 
-  std::string str, 
-  const std::string& target, 
-  const std::string& replace )
-{
-  for ( auto pos = str.find( target,0); 
-    pos != std::string::npos; 
-    pos = str.find( target,0) )
-  {
-    str.replace( pos, target.length(), replace );
-  }
-  return str;
-}
 
 class PidSimFrontEnd: public nanogui::Screen {
 public:
@@ -254,8 +243,7 @@ public:
         /*glMajor*/     3,
         /*glMinor*/     0) 
   {
-    base_initModel();
-    arm_initModel();
+    initModel();
     using namespace nanogui;
     Window *window = new Window(this, "Robot Arm PID Simulator");
     window->setPosition(Vector2i(15, 15));
@@ -332,14 +320,7 @@ public:
        buffer object management.
     */
   
-    mBaseShader.init( "baseShader", 
-      find_and_replace( baseVertexShader   , "PREFIX_", ""),
-      find_and_replace(  baseFragmentShader, "PREFIX_", "" )
-    );
-
-#ifdef ADD_ARM
-    mArmShader.init( "armShader", baseVertexShader, baseFragmentShader );
-#endif
+    mShader.init( "shader", vertexShader, fragmentShader ); 
 
     Matrix4f light;
     light.col(0) <<  0.1,  0.1, 0.1, 0.0;
@@ -347,25 +328,16 @@ public:
     light.col(2) <<  1.5,  1.5, 1.5, 0.0;
     light.col(3) <<  0.0,  0.0, 0.0, 1.0;
 
-    mBaseShader.bind();
-    mBaseShader.uploadIndices(base_indices);
-    mBaseShader.uploadAttrib("position", base_positions);
-    mBaseShader.uploadAttrib("normal", base_normals );
-    mBaseShader.setUniform("lightdir", light);
-
-#ifdef ADD_ARM
-    mArmShader.bind();
-    mArmShader.uploadIndices(arm_indices);
-    mArmShader.uploadAttrib("position", arm_positions);
-    mArmShader.uploadAttrib("normal", arm_normals );
-    mArmShader.setUniform("lightdir", light);
-#endif
+    mShader.bind();
+    mShader.uploadIndices(indices);
+    mShader.uploadAttrib("position", positions);
+    mShader.uploadAttrib("normal", normals );
+    mShader.setUniform("lightdir", light);
   }
 
   ~PidSimFrontEnd() 
   {
-    mBaseShader.free();
-    mArmShader.free();
+    mShader.free();
   }
 
   virtual bool keyboardEvent(int key, int scancode, int action, int modifiers) 
@@ -424,19 +396,17 @@ public:
     glDepthFunc( GL_LESS );
 
     /* Draw the window contents using OpenGL */
-    mBaseShader.bind();
-    mBaseShader.setUniform("projection", projection);
-    mBaseShader.setUniform("camera", camera);
-    mBaseShader.setUniform("orientation", baseModel );
-    mBaseShader.drawIndexed(GL_TRIANGLES, 0, base_TRIANGLES);
+    mShader.bind();
+    mShader.setUniform("projection", projection);
+    mShader.setUniform("camera", camera);
+    mShader.setUniform("orientation", baseModel );
+    mShader.drawIndexed(GL_TRIANGLES, base_TRIANGLE_START, base_TRIANGLE_END);
 
-#ifdef ADD_ARM
-    mArmShader.bind();
-    mArmShader.setUniform("projection", projection);
-    mArmShader.setUniform("camera", camera);
-    mArmShader.setUniform("orientation", armModel );
-    mArmShader.drawIndexed(GL_TRIANGLES, 0, arm_TRIANGLES);
-#endif
+    mShader.bind();
+    mShader.setUniform("projection", projection);
+    mShader.setUniform("camera", camera);
+    mShader.setUniform("orientation", armModel );
+    mShader.drawIndexed(GL_TRIANGLES, arm_TRIANGLE_START, arm_TRIANGLE_END - arm_TRIANGLE_START );
   }
 
   bool isReset()
@@ -450,8 +420,7 @@ public:
 
 private:
   bool                mReset = false;
-  nanogui::GLShader   mBaseShader;
-  nanogui::GLShader   mArmShader;
+  nanogui::GLShader   mShader;
   nanogui::TextBox*   mAngleTarget; 
   nanogui::TextBox*   mAngleStart; 
   nanogui::TextBox*   mAngleCurrent; 
