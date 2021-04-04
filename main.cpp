@@ -206,11 +206,11 @@ uniform mat4 orientation;
 uniform mat4 projection;
 in vec3 normal;
 in vec3 position;
-out vec4 tNormal;
+out vec3 tNormal;
 out vec3 FragPos;
 void main() {
   gl_Position = projection * camera * model * vec4(position, 1.0);
-  tNormal = orientation * vec4( normal, 1.0 );
+  tNormal = vec3(orientation * vec4( normal, 1.0 ));
   FragPos = vec3(model * vec4(position, 10.0));
 }
 
@@ -223,14 +223,27 @@ R"(#version 300 es
   precision highp float;
 #endif
 out vec4 color;
-in vec4 tNormal;
+in vec3 tNormal;
 in vec3 FragPos;
-uniform mat4 lightdir;
-uniform vec3 lightPos;
+uniform vec3 lightpos;
+uniform vec3 viewpos;
+float diffuseScale = .5;
+float ambientScale = .2;
+float specularScale = .5;
 void main() {
-  color = lightdir * tNormal;
+  vec3 lightdir = normalize( lightpos - FragPos );
+  float diffuse = max(dot(tNormal, lightdir), 0.0 );
+  vec3 viewdir = normalize( viewpos - FragPos );
+  vec3 reflectdir = reflect( -lightdir, tNormal );
+  float spec = pow(max(dot(viewdir, reflectdir), 0.0), 32.0 );
+
+  float light = diffuse * diffuseScale + ambientScale + spec * specularScale;
+  
+  color = vec4(light, light, light, 1.0 );
 }
 )";
+
+//uniform mat4 lightdir;
 
 class PidSimFrontEnd: public nanogui::Screen {
 public:
@@ -333,11 +346,19 @@ public:
     light.col(2) <<  .5,  .5, .5, 0.0;
     light.col(3) <<  0.0,  0.0, 0.0, 1.0;
 
+    Vector3f lightpos;
+    lightpos << 10, -50, 100;
+    // TODO, not found in fragment shader unless set here.  Pass through vertex shader?
+    // TODO, is not found period.
+    Vector3f viewpos;
+    viewpos << 0, 15, 40;
+
     mShader.bind();
     mShader.uploadIndices(indices);
     mShader.uploadAttrib("position", positions);
     mShader.uploadAttrib("normal", normals );
-    mShader.setUniform("lightdir", light);
+    mShader.setUniform("viewpos", viewpos);
+    mShader.setUniform("lightpos", lightpos );
   }
 
   ~PidSimFrontEnd() 
@@ -369,7 +390,7 @@ public:
 
     Matrix4f baseModel;
     baseModel.setIdentity();
-    baseModel.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf((float) glfwGetTime(),  Vector3f::UnitZ()));
+    //baseModel.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf((float) glfwGetTime(),  Vector3f::UnitZ()));
     Matrix4f baseOrientation;
     baseOrientation.setIdentity();
     baseOrientation.topLeftCorner<3,3>() = baseModel.topLeftCorner<3,3>();
@@ -390,6 +411,8 @@ public:
     camera.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf(-M_PI/2 + M_PI/8,  Vector3f::UnitX()));
     camera(1,3) = -15;
     camera(2,3) = -40;
+    Vector3f viewpos;
+    viewpos << 0, 15, 40;
 
     double aspect = (double) mSize.x() / (double) mSize.y();
     double fov = M_PI/4;   // 60 degrees
@@ -411,21 +434,19 @@ public:
     glEnable( GL_DEPTH_TEST );
     glDepthFunc( GL_LESS );
 
-    Vector3f lightPos;
-    lightPos << 10, 40, 10;
-
     /* Draw the window contents using OpenGL */
     mShader.bind();
     mShader.setUniform("projection", projection);
     mShader.setUniform("camera", camera);
+    //mShader.setUniform("viewpos", viewpos);
     mShader.setUniform("orientation", baseOrientation );
     mShader.setUniform("model", baseModel );
-    mShader.setUniform("lightPos", lightPos );
     mShader.drawIndexed(GL_TRIANGLES, base_TRIANGLE_START, base_TRIANGLE_END);
 
     mShader.bind();
     mShader.setUniform("projection", projection);
     mShader.setUniform("camera", camera);
+    //mShader.setUniform("viewpos", viewpos);
     mShader.setUniform("orientation", armOrientation );
     mShader.setUniform("model", armModel );
     mShader.drawIndexed(GL_TRIANGLES, arm_TRIANGLE_START, arm_TRIANGLE_END - arm_TRIANGLE_START );
