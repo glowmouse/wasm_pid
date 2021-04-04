@@ -342,17 +342,18 @@ public:
       stream << std::fixed << std::setprecision(1) << ( slider * scale );
       return stream.str();
     };
-    auto sliderToInt = []( float slider, int scale )
+    auto sliderToInt = []( double& storage, float slider, int scale, int offset=0 )
     {
-      return std::to_string((int) ( slider * scale ));
+      storage = slider * scale + offset;
+      return std::to_string((int) ( storage ));
     };
-    auto sliderToDegrees = [sliderToInt]( float slider ) 
+    auto sliderToDegrees = [sliderToInt]( double& storage, float slider ) 
     {
-      return sliderToInt( slider, 90 );
+      return sliderToInt( storage, slider, 180, -90 );
     };
-    auto sliderTo1000ms = [sliderToInt]( float slider ) 
+    auto sliderTo1000ms = [sliderToInt]( double& storage, float slider ) 
     {
-      return sliderToInt( slider, 1000 );
+      return sliderToInt( storage, slider, 1000 );
     };
     auto sliderTo10s = [sliderToFloat]( float slider ) 
     {
@@ -363,11 +364,17 @@ public:
     };
 
     new Label(window, "Arm Start Position", "sans-bold");
-    mAngleStart   = make_slider( window, "Start Arm Angle", 0.0, sliderToDegrees, "deg" );
-    mAngleTarget  = make_slider( window, "Target Arm Angle",  1.0, sliderToDegrees, "deg" );
+    make_slider( window, "Start Arm Angle", 0.0, 
+      [&](float slider) { return sliderToDegrees( mStartAngle, slider ); } ,
+      "deg" );
+
+    make_slider( window, "Target Arm Angle",  0.5,
+      [&](float slider) { return sliderToDegrees( mTargetAngle, slider ); }, 
+      "deg" );
 
     new Label(window, "Arm Current Position", "sans-bold");
-    mAngleCurrent = make_slider( window, "Arm Angle", 0.0, sliderToDegrees, "deg", true );
+    mAngleCurrent = make_slider( window, "Arm Angle", 0.0, 
+      [&](float slider) { return ""; }, "deg", true );
 
     new Label(window, "PID Settings", "sans-bold");
     mPID_P        = make_slider( window, "P", .5, sliderToPid, "");
@@ -375,7 +382,10 @@ public:
     mPID_D        = make_slider( window, "D", .5, sliderToPid, "");
 
     new Label(window, "Simulation Settings", "sans-bold");
-    mSensorDelay  = make_slider( window, "Sensor Delay", .1, sliderTo1000ms, "ms" );
+    make_slider( window, "Sensor Delay", .1, 
+      [&](float slider ) { return sliderTo1000ms( mSensorDelay, slider );}, 
+      "ms" );
+
     mIMemory      = make_slider( window, "I Memory", .5, sliderTo10s, "s" );
 
     new Label(window, "Simulation Control", "sans-bold" );
@@ -452,7 +462,7 @@ public:
   virtual void drawContents() {
     using namespace nanogui;
 
-    double angleRad = -mArmAngle + M_PI;
+    double angleRad = -mArmAngle + M_PI/2;
 
     double viewPortWidth =mSize.x()/2;
     double viewPortHeight=mSize.y()*2/3;
@@ -502,14 +512,12 @@ public:
     mShader.bind();
     mShader.setUniform("projection", projection);
     mShader.setUniform("camera", camera);
-    //mShader.setUniform("viewpos", viewpos);
     mShader.setUniform("model", baseModel );
     mShader.drawIndexed(GL_TRIANGLES, base_TRIANGLE_START, base_TRIANGLE_END);
 
     mShader.bind();
     mShader.setUniform("projection", projection);
     mShader.setUniform("camera", camera);
-    //mShader.setUniform("viewpos", viewpos);
     mShader.setUniform("model", armModel );
     mShader.drawIndexed(GL_TRIANGLES, arm_TRIANGLE_START, arm_TRIANGLE_END - arm_TRIANGLE_START );
   }
@@ -522,23 +530,26 @@ public:
   }
 
   void setArmAngle( double angle ) {
-    int intAngle = angle;
+    int intAngle = radToDeg(angle);
     mAngleCurrent->setValue( std::to_string( intAngle ));
-    double angleDegrees = angle;
-    mArmAngle = angleDegrees / 180.0 * M_PI;
+    mArmAngle = angle;
   }
+
+  double getStartAngle() {
+    return mStartAngle;
+  } 
 
 private:
   double              mArmAngle = 0.0;
+  double              mStartAngle;
+  double              mTargetAngle;
+  double              mSensorDelay;
   bool                mReset = false;
   nanogui::GLShader   mShader;
-  nanogui::TextBox*   mAngleTarget; 
-  nanogui::TextBox*   mAngleStart; 
   nanogui::TextBox*   mAngleCurrent; 
   nanogui::TextBox*   mPID_P; 
   nanogui::TextBox*   mPID_I; 
   nanogui::TextBox*   mPID_D; 
-  nanogui::TextBox*   mSensorDelay;
   nanogui::TextBox*   mIMemory;
   nanogui::Button*    mStart;
 };
@@ -548,7 +559,9 @@ class PidSimBackEnd
   public:
 
   PidSimBackEnd( nanogui::ref<PidSimFrontEnd> frontEnd ) : mfrontEnd{ frontEnd }
-  {}
+  {
+    reset();
+  }
 
   void update( std::chrono::duration<double> delta )
   {
@@ -566,23 +579,50 @@ class PidSimBackEnd
 
   void reset()
   {
-    mAngle = 170;
+    mAngle = degToRad(mfrontEnd->getStartAngle());
     mAngleVel= 0;
   }
 
   void updateOneTick()
   {
+    // Run simulation 50x a second.
+    double timeSlice = 1.0/50.0;
+
     if ( mfrontEnd->isReset() ) {
       reset();
     }
-    double mRadAngle = ( mAngle - 90 ) / 180 * M_PI;
-    double AngleAccel= -cos( mRadAngle ) * .01;
-    mAngleVel += AngleAccel;
-    mAngleVel *= .999; // damping
-    mAngle += mAngleVel;
-    if ( mAngle < -30 ) {
-      mAngle = -30;
-      mAngleVel = 0.0f;   // Hit the bottom of the holder arm
+    double armX = cos( mAngle );
+    double armY = sin( mAngle );
+    // Gravity = < 0   , -9.8 >
+    // Arm     = < armX, armY >
+    // Angular accelleration = Arm x Gravity
+    double AngleAccel = armX * -9.8;
+
+    // Accellaration to Velocity integration
+    mAngleVel += AngleAccel * timeSlice;
+    // damping.  Lose 3% of angular vel every 50th/ second.
+    mAngleVel *= .97; 
+
+    // Velocity to Angle integration
+    mAngle += mAngleVel * timeSlice;
+
+    //
+    // Impose some hard limits.  -120 degrees is about the angle where
+    // the final segment of the robot arm hits the second segment,
+    // visually.
+    //
+    if ( mAngle < degToRad( -120 )) {
+      mAngle    = degToRad( -120 );
+      mAngleVel = 0.0f;  // A hard stop kills all velocity
+    }
+
+    //
+    // Second limit, where the final segment hits the second segment, but
+    // in the other direction.
+    //
+    if ( mAngle > degToRad( 210 )) {
+      mAngle    = degToRad( 210 );
+      mAngleVel = 0.0f;  // Again, a hard stop kills all velocity
     }
 
     updateFrontEnd();
@@ -594,6 +634,7 @@ class PidSimBackEnd
   }
 
   double time = 0.0f;
+  // map mAngle to "screen space" with <x,y> = <cos(mAngle),sin(mAngle)>
   double mAngle = 0;
   double mAngleVel = 0;
 
