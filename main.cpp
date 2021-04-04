@@ -142,8 +142,32 @@ private:
     GLuint mTextureId;
 };
 
-double fps = 0;
-nanogui::TextBox *fpscapt;
+//
+// Some helper/ utility functions
+//
+
+///
+/// @brief Convert Degrees to Radians
+/// 
+/// @param[in] degrees - An angle in degrees
+/// @return            - Same angle in radians
+///
+double degToRad( double degrees ) 
+{
+  return degrees / 180.0 * M_PI; 
+}
+
+///
+/// @brief Convert Radians to Degrees
+/// 
+/// @param[in] radians - An angle in radians
+/// @return            - Same angle in degrees
+///
+double radToDeg( double radians ) 
+{
+  return radians / M_PI * 180.0;
+}
+
 
 nanogui::TextBox* make_slider( 
   nanogui::Widget*                    window,
@@ -191,59 +215,99 @@ nanogui::TextBox* make_slider(
   return textBox;
 }
 
-// Vertex shader 
 //
-// Note, normal calculation is busted.  Cannot include position
-// 
+// @brief OpenGL style Vertex Shader 
+//
+// @param[in]  projection - Maps from camera space to screen space
+// @param[in]  camera     - Maps from global space to camera space
+// @param[in]  model      - Maps from model local space to global space
+// @param[in]  normal     - All model normals, in model space
+// @param[in]  position   - All model positions, in model space
+// @param[out] FragNormal - All model normals in global space.  For shading.
+// @param[out] FragPos    - All model positions in global space.  For shading.
+//
 const std::string vertexShader = 
 R"(#version 300 es
 #ifdef GL_ES
   precision highp float;
 #endif
+uniform mat4 projection;
 uniform mat4 camera;
 uniform mat4 model;
-uniform mat4 projection;
 in vec3 normal;
 in vec3 position;
-out vec3 tNormal;
+out vec3 FragNormal;
 out vec3 FragPos;
+
 void main() {
   gl_Position = projection * camera * model * vec4(position, 1.0);
-  tNormal = vec3(model * vec4( normal,   0.0 ));
-  FragPos = vec3(model * vec4( position, 1.0 ));
+  FragNormal = vec3(model * vec4( normal,   0.0 ));
+  FragPos    = vec3(model * vec4( position, 1.0 ));
 }
 
 )";
 
-/* Fragment shader */
+//
+// @brief OpenGL style Fragment Shader
+//
+// @param[in]  lightpos   - Single point light source in global space
+// @param[in]  vewpos     - Location of camera in global space
+// @param[in]  FragNormal - All model normals in global space
+// @param[in]  FragPos    - All model positions in global space
+// @param[out] color      - The shaded color
+//
 const std::string fragmentShader =
 R"(#version 300 es
 #ifdef GL_ES
   precision highp float;
 #endif
-out vec4 color;
-in vec3 tNormal;
-in vec3 FragPos;
 uniform vec3 lightpos;
 uniform vec3 viewpos;
-float diffuseScale = .4;
-float ambientScale = .3;
+in vec3 FragNormal;
+in vec3 FragPos;
+out vec4 color;
+
+//
+// Three classic lighting models, ambient, diffuse, and specular.
+// 
+// TODO, maybe accept as arguments instead of hard coding
+//
+float diffuseScale  = .4;
+float ambientScale  = .3;
 float specularScale = .5;
+
+// Use lightBlue for ambient & diffuse, white for specilar.
+//
+vec3 lightBlue    = vec3(  .5,   .5, 1.0);
+vec3 white        = vec3( 1.0, 1.0, 1.0); 
+
 void main() {
-  vec3 lightdir = normalize( lightpos - FragPos );
-  float diffuse = max(dot(tNormal, lightdir), 0.0 );
-  vec3 viewdir = normalize( viewpos - FragPos );
-  vec3 reflectdir = reflect( -lightdir, tNormal );
-  float spec = pow(max(dot(viewdir, reflectdir), 0.0), 32.0 );
+  //
+  // Diffuse calculation
+  //
+  vec3 lightdir   = normalize( lightpos - FragPos );
+  float diffuse   = max(dot(FragNormal, lightdir), 0.0 );
 
-  vec3 colorDiffAmb = vec3( .5, .5, 1.0 ) * ( diffuse * diffuseScale + ambientScale );
-  vec3 colorSpec = vec3( 1.0, 1.0, 1.0 ) * ( spec * specularScale );
+  //
+  // Specular calculation
+  //
+  vec3 viewdir    = normalize( viewpos - FragPos );
+  vec3 reflectdir = reflect( -lightdir, FragNormal);
+  float spec      = pow(max(dot(viewdir, reflectdir), 0.0), 32.0 );
 
-  color = vec4(colorDiffAmb + colorSpec, 1.0 );
+  //
+  // Combine into a single RGB value
+  //
+  vec3 colorRGB  = lightBlue * ambientScale +
+                   lightBlue * diffuse * diffuseScale +
+                   white     * spec    * specularScale;
+
+  //
+  // Output in RGBA.  The A (Alpha) is 1.0 for non-transparent.
+  // 
+  color           = vec4( colorRGB, 1.0 );
 }
 )";
-
-//uniform mat4 lightdir;
 
 class PidSimFrontEnd: public nanogui::Screen {
 public:
@@ -457,8 +521,9 @@ public:
     return result;
   }
 
-  void setArmAngle( int angle ) {
-    mAngleCurrent->setValue( std::to_string( angle ));
+  void setArmAngle( double angle ) {
+    int intAngle = angle;
+    mAngleCurrent->setValue( std::to_string( intAngle ));
     double angleDegrees = angle;
     mArmAngle = angleDegrees / 180.0 * M_PI;
   }
@@ -550,8 +615,6 @@ void mainloop(){
 
 	numFrames++;
 	if (delta.count() > frameRateSmoothing) {
-    fps = (int) (numFrames / delta.count());
-    fpscapt->setValue(std::to_string((int) (fps)));
     numFrames = 0;
     lastFpsTime = std::chrono::high_resolution_clock::now();
   }
