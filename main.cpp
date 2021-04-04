@@ -336,10 +336,11 @@ public:
        freed when the parent window is deleted */
 
     // Same lambdas to format text.
-    auto sliderToFloat= []( float slider, float scale ) 
+    auto sliderToFloat= []( double& storage, float slider, float scale ) 
     {
       std::stringstream stream;
-      stream << std::fixed << std::setprecision(1) << ( slider * scale );
+      storage = slider * scale;
+      stream << std::fixed << std::setprecision(1) << ( storage );
       return stream.str();
     };
     auto sliderToInt = []( double& storage, float slider, int scale, int offset=0 )
@@ -355,12 +356,12 @@ public:
     {
       return sliderToInt( storage, slider, 1000 );
     };
-    auto sliderTo10s = [sliderToFloat]( float slider ) 
+    auto sliderTo10s = [sliderToFloat]( double& storage, float slider ) 
     {
-      return sliderToFloat( slider, 10.0 );
+      return sliderToFloat( storage, slider, 10.0 );
     };
-    auto sliderToPid = [sliderToFloat]( float slider ) {
-      return sliderToFloat( slider, 4.0 );
+    auto sliderToPid = [sliderToFloat]( double& storage, float slider ) {
+      return sliderToFloat( storage, slider, 4.0 );
     };
 
     new Label(window, "Arm Start Position", "sans-bold");
@@ -377,16 +378,19 @@ public:
       [&](float slider) { return ""; }, "deg", true );
 
     new Label(window, "PID Settings", "sans-bold");
-    mPID_P        = make_slider( window, "P", .5, sliderToPid, "");
-    mPID_I        = make_slider( window, "I", .5, sliderToPid, "");
-    mPID_D        = make_slider( window, "D", .5, sliderToPid, "");
+    make_slider( window, "P", 0, 
+      [&](float slider) { return sliderToPid( mPidP, slider ); }, "" );
+    make_slider( window, "I", 0, 
+      [&](float slider) { return sliderToPid( mPidI, slider ); }, "" );
+    make_slider( window, "D", 0, 
+      [&](float slider) { return sliderToPid( mPidD, slider ); }, "" );
 
     new Label(window, "Simulation Settings", "sans-bold");
     make_slider( window, "Sensor Delay", .1, 
       [&](float slider ) { return sliderTo1000ms( mSensorDelay, slider );}, 
       "ms" );
 
-    mIMemory      = make_slider( window, "I Memory", .5, sliderTo10s, "s" );
+    //mIMemory      = make_slider( window, "I Memory", .5, sliderTo10s, "s" );
 
     new Label(window, "Simulation Control", "sans-bold" );
 
@@ -544,13 +548,12 @@ private:
   double              mStartAngle;
   double              mTargetAngle;
   double              mSensorDelay;
+  double              mPidP;
+  double              mPidI;
+  double              mPidD;
   bool                mReset = false;
   nanogui::GLShader   mShader;
   nanogui::TextBox*   mAngleCurrent; 
-  nanogui::TextBox*   mPID_P; 
-  nanogui::TextBox*   mPID_I; 
-  nanogui::TextBox*   mPID_D; 
-  nanogui::TextBox*   mIMemory;
   nanogui::Button*    mStart;
 };
 
