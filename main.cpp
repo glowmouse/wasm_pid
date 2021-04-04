@@ -206,10 +206,12 @@ uniform mat4 orientation;
 uniform mat4 projection;
 in vec3 normal;
 in vec3 position;
-out vec4 tnormal;
+out vec4 tNormal;
+out vec3 FragPos;
 void main() {
   gl_Position = projection * camera * model * vec4(position, 1.0);
-  tnormal = orientation * vec4( normal, 1.0 );
+  tNormal = orientation * vec4( normal, 1.0 );
+  FragPos = vec3(model * vec4(position, 10.0));
 }
 
 )";
@@ -221,10 +223,12 @@ R"(#version 300 es
   precision highp float;
 #endif
 out vec4 color;
-in vec4 tnormal;
+in vec4 tNormal;
+in vec3 FragPos;
 uniform mat4 lightdir;
+uniform vec3 lightPos;
 void main() {
-  color = lightdir * tnormal;
+  color = lightdir * tNormal;
 }
 )";
 
@@ -407,12 +411,16 @@ public:
     glEnable( GL_DEPTH_TEST );
     glDepthFunc( GL_LESS );
 
+    Vector3f lightPos;
+    lightPos << 10, 40, 10;
+
     /* Draw the window contents using OpenGL */
     mShader.bind();
     mShader.setUniform("projection", projection);
     mShader.setUniform("camera", camera);
     mShader.setUniform("orientation", baseOrientation );
     mShader.setUniform("model", baseModel );
+    mShader.setUniform("lightPos", lightPos );
     mShader.drawIndexed(GL_TRIANGLES, base_TRIANGLE_START, base_TRIANGLE_END);
 
     mShader.bind();
