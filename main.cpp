@@ -226,8 +226,8 @@ in vec3 tNormal;
 in vec3 FragPos;
 uniform vec3 lightpos;
 uniform vec3 viewpos;
-float diffuseScale = .5;
-float ambientScale = .2;
+float diffuseScale = .4;
+float ambientScale = .3;
 float specularScale = .5;
 void main() {
   vec3 lightdir = normalize( lightpos - FragPos );
@@ -236,9 +236,10 @@ void main() {
   vec3 reflectdir = reflect( -lightdir, tNormal );
   float spec = pow(max(dot(viewdir, reflectdir), 0.0), 32.0 );
 
-  float light = diffuse * diffuseScale + ambientScale + spec * specularScale;
-  
-  color = vec4(light, light, light, 1.0 );
+  vec3 colorDiffAmb = vec3( .5, .5, 1.0 ) * ( diffuse * diffuseScale + ambientScale );
+  vec3 colorSpec = vec3( 1.0, 1.0, 1.0 ) * ( spec * specularScale );
+
+  color = vec4(colorDiffAmb + colorSpec, 1.0 );
 }
 )";
 
@@ -325,7 +326,7 @@ public:
 
     Window *chartWindow = new Window(this, "PID Stats over Time");
     chartWindow->setPosition(Vector2i( mSize.x()/2, 15));
-    chartWindow->setFixedSize(Vector2i( mSize.x()/2-15, mSize.y()/3-30 ));
+    chartWindow->setFixedSize(Vector2i( mSize.x()/2-15, mSize.y()*.4-30 ));
 
     performLayout();
 
