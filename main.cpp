@@ -202,7 +202,6 @@ R"(#version 300 es
 #endif
 uniform mat4 camera;
 uniform mat4 model;
-uniform mat4 orientation;
 uniform mat4 projection;
 in vec3 normal;
 in vec3 position;
@@ -210,8 +209,8 @@ out vec3 tNormal;
 out vec3 FragPos;
 void main() {
   gl_Position = projection * camera * model * vec4(position, 1.0);
-  tNormal = vec3(orientation * vec4( normal, 1.0 ));
-  FragPos = vec3(model * vec4(position, 10.0));
+  tNormal = vec3(model * vec4( normal,   0.0 ));
+  FragPos = vec3(model * vec4( position, 1.0 ));
 }
 
 )";
@@ -326,7 +325,7 @@ public:
 
     Window *chartWindow = new Window(this, "PID Stats over Time");
     chartWindow->setPosition(Vector2i( mSize.x()/2, 15));
-    chartWindow->setFixedSize(Vector2i( mSize.x()/2-15, mSize.y()/2-30 ));
+    chartWindow->setFixedSize(Vector2i( mSize.x()/2-15, mSize.y()/3-30 ));
 
     performLayout();
 
@@ -347,7 +346,9 @@ public:
     light.col(3) <<  0.0,  0.0, 0.0, 1.0;
 
     Vector3f lightpos;
-    lightpos << 10, -50, 100;
+    lightpos << 10, -40, 50;
+    //lightpos << 5, -15, 10;
+    // 10, 0, 25
     // TODO, not found in fragment shader unless set here.  Pass through vertex shader?
     // TODO, is not found period.
     Vector3f viewpos;
@@ -388,12 +389,12 @@ public:
 
     double angleRad = -mArmAngle + M_PI;
 
+    double viewPortWidth =mSize.x()/2;
+    double viewPortHeight=mSize.y()*2/3;
+
     Matrix4f baseModel;
     baseModel.setIdentity();
     //baseModel.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf((float) glfwGetTime(),  Vector3f::UnitZ()));
-    Matrix4f baseOrientation;
-    baseOrientation.setIdentity();
-    baseOrientation.topLeftCorner<3,3>() = baseModel.topLeftCorner<3,3>();
 
     Matrix4f armLocal;
     armLocal.setIdentity();
@@ -402,20 +403,18 @@ public:
     armLocal(1,3) = 0;          // Y Join Point
     armLocal(2,3) = 25.6066;    // Z Join Point
     Matrix4f armModel = baseModel * armLocal;
-    Matrix4f armOrientation;
-    armOrientation.setIdentity();
-    armOrientation.topLeftCorner<3,3>() = armModel.topLeftCorner<3,3>();
 
     Matrix4f camera;
     camera.setIdentity();
     camera.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf(-M_PI/2 + M_PI/8,  Vector3f::UnitX()));
-    camera(1,3) = -15;
-    camera(2,3) = -40;
+    camera(0,3) = -7*1.4;
+    camera(1,3) = -12*1.4;
+    camera(2,3) = -40*1.4;
     Vector3f viewpos;
     viewpos << 0, 15, 40;
 
-    double aspect = (double) mSize.x() / (double) mSize.y();
-    double fov = M_PI/4;   // 60 degrees
+    double aspect = viewPortWidth / viewPortHeight;
+    double fov = M_PI/6;   // 30 degrees
     double near = 1;
     double far = 400;
 
@@ -430,7 +429,7 @@ public:
 
     glViewport( 
       mSize.x()/2, 0,
-      mSize.x()/2, mSize.y()/2 );
+      viewPortWidth, viewPortHeight );
     glEnable( GL_DEPTH_TEST );
     glDepthFunc( GL_LESS );
 
@@ -439,7 +438,6 @@ public:
     mShader.setUniform("projection", projection);
     mShader.setUniform("camera", camera);
     //mShader.setUniform("viewpos", viewpos);
-    mShader.setUniform("orientation", baseOrientation );
     mShader.setUniform("model", baseModel );
     mShader.drawIndexed(GL_TRIANGLES, base_TRIANGLE_START, base_TRIANGLE_END);
 
@@ -447,7 +445,6 @@ public:
     mShader.setUniform("projection", projection);
     mShader.setUniform("camera", camera);
     //mShader.setUniform("viewpos", viewpos);
-    mShader.setUniform("orientation", armOrientation );
     mShader.setUniform("model", armModel );
     mShader.drawIndexed(GL_TRIANGLES, arm_TRIANGLE_START, arm_TRIANGLE_END - arm_TRIANGLE_START );
   }
@@ -503,7 +500,7 @@ class PidSimBackEnd
 
   void reset()
   {
-    mAngle = 90;
+    mAngle = 170;
     mAngleVel= 0;
   }
 
