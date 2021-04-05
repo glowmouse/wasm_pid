@@ -287,11 +287,19 @@ void main() {
     alpha = 1.0;
   }
   else if ( colorIndex > 1.99 && colorIndex < 2.01 ) {
-    objcolor  = vec3( 0.0, 0.0, 1.0 );
+    objcolor  = vec3( 0.0, 1.0, 0.0 );
     alpha = 1.0;
   }
   else if ( colorIndex > 2.99 && colorIndex < 3.01 ) {
-    objcolor  = vec3( 0.0, 1.0, 0.0 );
+    objcolor  = vec3( 1.0, 0.0, 1.0 );
+    alpha = 1.0;
+  }
+  else if ( colorIndex > 3.99 && colorIndex < 4.01 ) {
+    objcolor  = vec3( 1.0, 1.0, 0.0 );
+    alpha = 1.0;
+  }
+  else if ( colorIndex > 4.99 && colorIndex < 5.01 ) {
+    objcolor  = vec3( 0.5, 0.5, 1.0 );
     alpha = 1.0;
   }
   else {
@@ -373,11 +381,7 @@ public:
     {
       return sliderToInt( storage, slider, 180, -90 );
     };
-    auto sliderTo1000ms = [sliderToInt]( double& storage, float slider ) 
-    {
-      return sliderToInt( storage, slider, 1000 );
-    };
-    auto sliderTo10s = [sliderToFloat]( double& storage, float slider ) 
+    auto sliderTo10 = [sliderToFloat]( double& storage, float slider ) 
     {
       return sliderToFloat( storage, slider, 10.0 );
     };
@@ -407,11 +411,12 @@ public:
       [&](float slider) { return sliderToPid( mPidD, slider ); }, "" );
 
     new Label(window, "Simulation Settings", "sans-bold");
-    make_slider( window, "Sensor Delay", .1, 
-      [&](float slider ) { return sliderTo1000ms( mSensorDelay, slider );}, 
-      "ms" );
-
-    //mIMemory      = make_slider( window, "I Memory", .5, sliderTo10s, "s" );
+    make_slider( window, "Rolling Friction", .2, 
+      [&](float slider ) { return sliderTo10( mRollingFriction, slider );}, 
+      "" );
+    make_slider( window, "Static Friction", 0, 
+      [&](float slider ) { return sliderTo10( mStaticFriction, slider );}, 
+      "" );
 
     new Label(window, "Simulation Control", "sans-bold" );
 
@@ -565,8 +570,10 @@ public:
     assert( mAxis.size() == axisSamples );
     std::pair<int,int> position(0,0);
     position = populateGraphIndices( mAxis, position, 2.0 );
-    position = populateGraphIndices( mIError, position, 3.0 );
     position = populateGraphIndices( mPError, position, 1.0 );
+    position = populateGraphIndices( mIError, position, 3.0 );
+    position = populateGraphIndices( mDError, position, 4.0 );
+    position = populateGraphIndices( mMotor, position, 5.0 );
     assert( position.first  == numGraphPositions );
     assert( position.second == numGraphIndices );
 
@@ -609,22 +616,30 @@ public:
   {
     mPError.clear();
     mIError.clear();
+    mDError.clear();
+    mMotor.clear();
     for ( size_t i = 0; i < samplesToRecord; ++i ) {
       mPError.push_back( std::nullopt );
       mIError.push_back( std::nullopt );
+      mDError.push_back( std::nullopt );
+      mMotor.push_back( std::nullopt );
     }
   }
 
-  void recordActualError( double pError, double iError )
+  void recordActualError( double pError, double iError, double dError, double motor )
   {
     //Not the cleverist way to do this, but CPU is cheap.
     size_t samplesToMove = samplesToRecord - 1;
     for ( size_t i = 0; i < samplesToMove; ++i ) {
       mPError.at( i ) = mPError.at( i+1 );
       mIError.at( i ) = mIError.at( i+1 );
+      mDError.at( i ) = mDError.at( i+1 );
+      mMotor.at( i ) = mMotor.at( i+1 );
     }
     mPError.at( samplesToRecord-1 ) = pError;
     mIError.at( samplesToRecord-1 ) = iError;
+    mDError.at( samplesToRecord-1 ) = dError;
+    mMotor.at( samplesToRecord-1 ) = motor;
   }
 
   std::pair<int,int> populateGraphIndices( 
@@ -686,22 +701,27 @@ public:
 
   double getP() { return mPidP; }
   double getI() { return mPidI; }
+  double getD() { return mPidD; }
+  double getRollingFriction() { return mRollingFriction; }
+  double getStaticFriction() { return mStaticFriction; }
 
 private:
 
-  static constexpr int       secondsToDisplay = 15;
+  static constexpr int       secondsToDisplay = 5;
   static constexpr int       samplesPerSecond = 10;
   static constexpr size_t    samplesToRecord = samplesPerSecond * secondsToDisplay;
   static constexpr size_t    axisSamples = 30;
 
   // For each sample, record top, middle, botton for graph
   static constexpr int numGraphPositions = 
-      3 * (2*samplesToRecord + axisSamples );
+      3 * (4*samplesToRecord + axisSamples );
   static constexpr int numGraphIndices   =
-      4 * (2*(samplesToRecord-1)+(axisSamples-1)); 
+      4 * (4*(samplesToRecord-1)+(axisSamples-1)); 
 
   std::vector<std::optional<double>> mPError;
   std::vector<std::optional<double>> mIError;
+  std::vector<std::optional<double>> mDError;
+  std::vector<std::optional<double>> mMotor;
   std::vector<std::optional<double>> mAxis;
 
   double              mArmAngle = 0.0;
@@ -711,6 +731,8 @@ private:
   double              mPidP;
   double              mPidI;
   double              mPidD;
+  double              mStaticFriction;
+  double              mRollingFriction;
   bool                mReset = false;
   bool                mNewSettings = false;
   nanogui::GLShader   mShader;
@@ -748,6 +770,9 @@ class PidSimBackEnd
   {
     mPidP = mFrontEnd->getP();
     mPidI = mFrontEnd->getI();
+    mPidD = mFrontEnd->getD();
+    mRollingFriction = mFrontEnd->getRollingFriction()/10.0;
+    mStaticFriction= mFrontEnd->getStaticFriction();
     mTargetAngle = degToRad(mFrontEnd->getTargetAngle());
   }
 
@@ -756,12 +781,7 @@ class PidSimBackEnd
     mAngle       = degToRad(mFrontEnd->getStartAngle());
     mAngleVel= 0;
     mFrontEnd->resetErrorRecord();
-    mIError.clear();
-    for ( int idx = 0; idx < mISamples; ++idx ) {
-      mIError.push_back(0.0);
-    }
-    mIPos = 0;
-    mISError = 0;
+    mIError = 0;
     softReset();
   }
 
@@ -784,10 +804,35 @@ class PidSimBackEnd
     // Angular accelleration = Arm x Gravity
     double AngleAccel = armX * -9.8;
 
+    // Compute and record the error.
+
+    static int counter=0;
+    int sampleInterval = updatesPerSecond / mFrontEnd->getSamplesPerSecond();
+    ++counter;
+
+    double pError = mAngle - mTargetAngle;
+    mIError += pError;
+    double iError = mIError * timeSlice; 
+    double dError = (pError - mLastPError) / timeSlice / 5.0;
+    mLastPError = pError;
+
+    double pTerm = pError * mPidP;
+    double iTerm = iError * mPidI;
+    double dTerm = dError * mPidD;
+
+    double all = pTerm + iTerm + dTerm;
+
+    AngleAccel -= all/5/timeSlice;
+    if ( AngleAccel > 0 ) {
+      AngleAccel = std::max( AngleAccel - mStaticFriction, 0.0 );
+    }
+    else {
+      AngleAccel = std::min( AngleAccel + mStaticFriction, 0.0 );
+    }
+
     // Accellaration to Velocity integration
     mAngleVel += AngleAccel * timeSlice;
-    // damping.  Lose 5% of angular vel every 50th/ second.
-    mAngleVel *= .95; 
+    mAngleVel *= 1-mRollingFriction;
 
     // Velocity to Angle integration
     mAngle += mAngleVel * timeSlice;
@@ -811,29 +856,9 @@ class PidSimBackEnd
       mAngleVel = 0.0f;  // Again, a hard stop kills all velocity
     }
 
-    // Compute and record the error.
-    double error = mAngle - mTargetAngle;
-
-    static int counter=0;
-    int sampleInterval = updatesPerSecond / mFrontEnd->getSamplesPerSecond();
-    ++counter;
-
-    mIError.at( mIPos ) = error;
-    mIPos = ( mIPos + 1 ) % mISamples;
-
-    mISError += error;
-    double iError = mISError * timeSlice; 
-
-    double pTerm = error * mPidP;
-    double iTerm = iError * mPidI;
-    double dTerm = 0;
-
-    double all = pTerm + iTerm + dTerm;
-
-    mAngleVel -= all/5;
 
     if( (counter % sampleInterval ) == 0 ) {
-      mFrontEnd->recordActualError( radToDeg(error), radToDeg( iError ));
+      mFrontEnd->recordActualError( radToDeg(pError), radToDeg( iError ), radToDeg( dError), -all*50 );
     }
     updateFrontEnd();
   }
@@ -845,12 +870,7 @@ class PidSimBackEnd
 
   private:
 
-  static constexpr int secondsOfIMemory = 5;
   static constexpr int updatesPerSecond = 50;
-  static constexpr int mISamples = secondsOfIMemory * updatesPerSecond;
-
-  std::vector<double> mIError;
-  size_t mIPos;
 
   double time = 0.0f;
   // map mAngle to "screen space" with <x,y> = <cos(mAngle),sin(mAngle)>
@@ -859,10 +879,14 @@ class PidSimBackEnd
 
   double mPidP = 0;
   double mPidI = 0;
+  double mPidD = 0;
+  double mRollingFriction = 0;
+  double mStaticFriction= 0;
 
   // From the front end
   double mTargetAngle = 0;
-  double mISError = 0;
+  double mIError = 0;
+  double mLastPError = 0;
 
   nanogui::ref<PidSimFrontEnd> mFrontEnd;
 };
