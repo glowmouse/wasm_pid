@@ -244,7 +244,6 @@ void main() {
   FragNormal = vec3(model * vec4( normal,   0.0 ));
   FragPos    = vec3(model * vec4( position, 1.0 ));
 }
-
 )";
 
 //
@@ -278,7 +277,7 @@ float specularScale = .5;
 
 // Use lightBlue for ambient & diffuse, white for specilar.
 //
-vec3 lightBlue    = vec3(  .5,   .5, 1.0);
+vec3 objcolor     = vec3(  .5,   .5, 1.0);
 vec3 white        = vec3( 1.0, 1.0, 1.0); 
 
 void main() {
@@ -298,14 +297,100 @@ void main() {
   //
   // Combine into a single RGB value
   //
-  vec3 colorRGB  = lightBlue * ambientScale +
-                   lightBlue * diffuse * diffuseScale +
+  vec3 colorRGB  = objcolor  * ambientScale +
+                   objcolor  * diffuse * diffuseScale +
                    white     * spec    * specularScale;
 
   //
   // Output in RGBA.  The A (Alpha) is 1.0 for non-transparent.
   // 
   color           = vec4( colorRGB, 1.0 );
+}
+)";
+
+const std::string vertexShaderGrapher =
+R"(#version 300 es
+#ifdef GL_ES
+  precision highp float;
+#endif
+in vec4 position;
+out float colorIndex;
+out vec3 FragNormalIn;
+out vec3 FragPos;
+
+void main() {
+  FragPos = vec3(position.x, position.y*.04, 0.0 );
+  gl_Position = vec4(FragPos, 1 );
+  colorIndex = position.w;
+  FragNormalIn = vec3( 0.0, position.z, -(1.0-abs(position.z)) );
+}
+)";
+
+const std::string fragmentShaderGrapher=
+R"(#version 300 es
+#ifdef GL_ES
+  precision highp float;
+#endif
+out vec4 color;
+in float colorIndex;
+in vec3 FragPos;
+in vec3 FragNormalIn;
+
+//
+// Three classic lighting models, ambient, diffuse, and specular.
+// 
+// TODO, maybe accept as arguments instead of hard coding
+//
+float diffuseScale  = .4;
+float ambientScale  = .3;
+float specularScale = .5;
+
+vec3 lightpos     = vec3( 1.0, 1.0, -5.0 );
+vec3 white        = vec3( 1.0, 1.0, 1.0); 
+vec3 objcolor;
+vec3 viewpos      = vec3( 0.0, 0.0, -5.0);
+float alpha;
+
+void main() {
+  if ( colorIndex > .99 && colorIndex < 1.01 ) {
+    objcolor  = vec3( 1.0, 0.2, 0.2 );
+    alpha = 1.0;
+  }
+  else if ( colorIndex > 1.99 && colorIndex < 2.01 ) {
+    objcolor  = vec3( 0.0, 0.0, 1.0 );
+    alpha = 1.0;
+  }
+  else {
+    objcolor  = vec3( 0.0, 0.0, 0.0 );
+    alpha = 0.0;
+  }
+
+  vec3 FragNormal = normalize( FragNormalIn );
+
+  //
+  // Diffuse calculation
+  //
+  vec3 lightdir   = normalize( lightpos - FragPos );
+  float diffuse   = max(dot(FragNormal, lightdir), 0.0 );
+
+  //
+  // Specular calculation
+  //
+  vec3 viewdir    = normalize( viewpos - FragPos );
+  vec3 reflectdir = reflect( -lightdir, FragNormal);
+  float spec      = pow(max(dot(viewdir, reflectdir), 0.0), 32.0 );
+
+  //
+  // Combine into a single RGB value
+  //
+  vec3 colorRGB  = objcolor  * ambientScale +
+                   objcolor  * diffuse * diffuseScale +
+                   white     * spec    * specularScale * alpha;
+
+  //
+  // Output in RGBA.  The A (Alpha) is 1.0 for non-transparent.
+  // 
+  color           = vec4( colorRGB, alpha );
 }
 )";
 
@@ -323,7 +408,9 @@ public:
         /*stencilBits*/ 8,
         /*nSamples*/    0,
         /*glMajor*/     3,
-        /*glMinor*/     0) 
+        /*glMinor*/     0),
+      graphPositions{ 4, numGraphPositions },
+      graphIndices{ 3, numGraphIndices}
   {
     initModel();
     using namespace nanogui;
@@ -402,9 +489,9 @@ public:
     auto reset = new Button( panel, "Reset" );
     reset->setCallback( [&] (void) { mReset =true; }); 
 
-    Window *chartWindow = new Window(this, "PID Stats over Time");
-    chartWindow->setPosition(Vector2i( mSize.x()/2, 15));
-    chartWindow->setFixedSize(Vector2i( mSize.x()/2-15, mSize.y()*.4-30 ));
+    //Window *chartWindow = new Window(this, "PID Stats over Time");
+    //chartWindow->setPosition(Vector2i( mSize.x()/2, 15));
+    //chartWindow->setFixedSize(Vector2i( mSize.x()/2-15, mSize.y()*.4-30 ));
 
     performLayout();
 
@@ -417,6 +504,7 @@ public:
     */
   
     mShader.init( "shader", vertexShader, fragmentShader ); 
+    mGrapher.init( "grapher", vertexShaderGrapher, fragmentShaderGrapher ); 
 
     Matrix4f light;
     light.col(0) <<  0.5,  0.5, 0.5, 0.0;
@@ -444,6 +532,7 @@ public:
   ~PidSimFrontEnd() 
   {
     mShader.free();
+    mGrapher.free();
   }
 
   virtual bool keyboardEvent(int key, int scancode, int action, int modifiers) 
@@ -514,16 +603,34 @@ public:
 
     /* Draw the window contents using OpenGL */
     mShader.bind();
+    mShader.uploadIndices(indices);
     mShader.setUniform("projection", projection);
     mShader.setUniform("camera", camera);
     mShader.setUniform("model", baseModel );
+    static int count = 0;
+    if ( count < 3 ) { std::cout << "c0\n"; }
     mShader.drawIndexed(GL_TRIANGLES, base_TRIANGLE_START, base_TRIANGLE_END);
+    if ( count < 3 ) { std::cout << "c1\n"; }
 
     mShader.bind();
     mShader.setUniform("projection", projection);
     mShader.setUniform("camera", camera);
     mShader.setUniform("model", armModel );
+    if ( count < 3 ) { std::cout << "c2\n"; }
     mShader.drawIndexed(GL_TRIANGLES, arm_TRIANGLE_START, arm_TRIANGLE_END - arm_TRIANGLE_START );
+    if ( count < 3 ) { std::cout << "c3\n"; }
+    ++count;
+
+    glViewport( 
+      mSize.x()/2, viewPortHeight,
+      viewPortWidth, mSize.y()-viewPortHeight );
+    glDisable( GL_DEPTH_TEST );
+ 
+    populateGraphIndices();
+    mGrapher.bind();
+    mGrapher.uploadIndices(graphIndices);
+    mGrapher.uploadAttrib("position", graphPositions);
+    mGrapher.drawIndexed(GL_TRIANGLES, 0, numGraphIndices );
   }
 
   bool isReset()
@@ -541,9 +648,105 @@ public:
 
   double getStartAngle() {
     return mStartAngle;
-  } 
+  }
+
+  double getTargetAngle() {
+    return mTargetAngle;
+  }
+
+  void resetErrorRecord()
+  {
+    mActualError.clear();
+    for ( size_t i = 0; i < samplesToRecord; ++i ) {
+      mActualError.push_back( std::nullopt );
+    }
+  }
+
+  void recordActualError( double errorAngle )
+  {
+    //Not the cleverist way to do this, but CPU is cheap.
+    size_t samplesToMove = samplesToRecord - 1;
+    for ( size_t i = 0; i < samplesToMove; ++i ) {
+      mActualError.at( i ) = mActualError.at( i+1 );
+    }
+    mActualError.at( samplesToRecord-1 ) = errorAngle;
+  }
+
+  void populateGraphIndices()
+  {
+    double dim = 2.0f;
+    double xLeft  = -dim/2;
+    double xRight =  dim/2;
+    double x = xLeft;
+    double xInc = dim / ((double) (samplesToRecord-1) );
+    int validCount = 0;
+    double lineThickness = 0.5;
+
+    const double zero = 0.0;
+    graphPositions.col(0) << xLeft,  zero-lineThickness, -1, 2;
+    graphPositions.col(1) << xLeft,  zero              ,  0, 2;
+    graphPositions.col(2) << xLeft,  zero+lineThickness,  1, 2;
+    graphPositions.col(3) << xRight, zero-lineThickness, -1, 2;
+    graphPositions.col(4) << xRight, zero              ,  0, 2;
+    graphPositions.col(5) << xRight, zero+lineThickness,  1, 2;
+
+    graphIndices.col( 0 ) << 0, 3, 4; 
+    graphIndices.col( 1 ) << 0, 4, 1;
+    graphIndices.col( 2 ) << 1, 4, 5; 
+    graphIndices.col( 3 ) << 1, 5, 2; 
+
+    for ( int i = 0; i < samplesToRecord; ++i ) 
+    {
+      int base = i*3 + 6;
+
+      int before = i > 0 ? i-1 : i;
+      int after  = i < samplesToRecord -1 ? i+1 : samplesToRecord-1;
+
+      const bool sampleValid = mActualError.at( before ) && mActualError.at( i ) && mActualError.at( after );
+
+      if ( sampleValid ) {
+        ++validCount;
+        double y = mActualError.at( i ).value() / 10.0f;
+        graphPositions.col(base + 0) << x, y-lineThickness, -1.0, 1.0;
+        graphPositions.col(base + 1) << x, y+0,              0.0, 1.0;
+        graphPositions.col(base + 2) << x, y+lineThickness,  1.0, 1.0;
+      }
+      else {
+        graphPositions.col(base + 0) << x, 0, -1.0, 0;
+        graphPositions.col(base + 1) << x, 0,  0.0, 0;
+        graphPositions.col(base + 2) << x, 0,  1.0, 0;
+      }
+      x+=xInc;
+    }
+    for ( int i = 0; i < samplesToRecord-1; ++i ) 
+    {
+      int base = 4+i*4;
+      int basePos = i*3+6;
+
+      graphIndices.col( base + 0 ) << basePos+0, basePos+3, basePos+ 4; 
+      graphIndices.col( base + 1 ) << basePos+0, basePos+4, basePos+ 1;
+      graphIndices.col( base + 2 ) << basePos+1, basePos+4, basePos+ 5; 
+      graphIndices.col( base + 3 ) << basePos+1, basePos+5, basePos+ 2; 
+
+    }
+  }
 
 private:
+
+  static constexpr int       secondsToDisplay = 5;
+  static constexpr size_t    samplesToRecord = secondsToDisplay * 5;
+  static constexpr int       axisSegments = 2;
+
+  // For each sample, record top, middle, botton for graph
+  static constexpr int numGraphPositions = 
+      3 * samplesToRecord +       // For each sample
+      6;                          // For the axis line                     
+  static constexpr int numGraphIndices   = 
+      4 * (samplesToRecord-1) +   // For each sample
+      4;                          // For the axis line
+
+  std::vector<std::optional<double>> mActualError{ samplesToRecord };
+
   double              mArmAngle = 0.0;
   double              mStartAngle;
   double              mTargetAngle;
@@ -553,15 +756,19 @@ private:
   double              mPidD;
   bool                mReset = false;
   nanogui::GLShader   mShader;
+  nanogui::GLShader   mGrapher;
   nanogui::TextBox*   mAngleCurrent; 
   nanogui::Button*    mStart;
+
+  nanogui::MatrixXf graphPositions;
+  nanogui::MatrixXu graphIndices;
 };
 
 class PidSimBackEnd
 {
   public:
 
-  PidSimBackEnd( nanogui::ref<PidSimFrontEnd> frontEnd ) : mfrontEnd{ frontEnd }
+  PidSimBackEnd( nanogui::ref<PidSimFrontEnd> frontEnd ) : mFrontEnd{ frontEnd }
   {
     reset();
   }
@@ -582,8 +789,10 @@ class PidSimBackEnd
 
   void reset()
   {
-    mAngle = degToRad(mfrontEnd->getStartAngle());
+    mAngle       = degToRad(mFrontEnd->getStartAngle());
+    mTargetAngle = degToRad(mFrontEnd->getTargetAngle());
     mAngleVel= 0;
+    mFrontEnd->resetErrorRecord();
   }
 
   void updateOneTick()
@@ -591,7 +800,7 @@ class PidSimBackEnd
     // Run simulation 50x a second.
     double timeSlice = 1.0/50.0;
 
-    if ( mfrontEnd->isReset() ) {
+    if ( mFrontEnd->isReset() ) {
       reset();
     }
     double armX = cos( mAngle );
@@ -628,12 +837,21 @@ class PidSimBackEnd
       mAngleVel = 0.0f;  // Again, a hard stop kills all velocity
     }
 
+    // Compute and record the error.
+    double error = mAngle - mTargetAngle;
+
+    static int counter=0;
+    if( (counter % 10) == 0 ) {
+      mFrontEnd->recordActualError( radToDeg(error) );
+    }
+    ++counter;
+
     updateFrontEnd();
   }
 
   void updateFrontEnd()
   {
-    mfrontEnd->setArmAngle( mAngle );
+    mFrontEnd->setArmAngle( mAngle );
   }
 
   double time = 0.0f;
@@ -641,7 +859,10 @@ class PidSimBackEnd
   double mAngle = 0;
   double mAngleVel = 0;
 
-  nanogui::ref<PidSimFrontEnd> mfrontEnd;
+  // From the front end
+  double mTargetAngle = 0;
+
+  nanogui::ref<PidSimFrontEnd> mFrontEnd;
 };
 
 std::unique_ptr<PidSimBackEnd> backEndSingleton;
