@@ -38,9 +38,6 @@
 #include <string>
 #include <emscripten.h>
 #include "model.h"  // auto generated code.
-
-// Includes for the GLTexture class.
-#include <cstdint>
 #include <memory>
 #include <utility>
 #include <chrono>
@@ -73,74 +70,6 @@ using std::string;
 using std::vector;
 using std::pair;
 using std::to_string;
-
-class GLTexture {
-public:
-    using handleType = std::unique_ptr<uint8_t[], void(*)(void*)>;
-    GLTexture() = default;
-    GLTexture(const std::string& textureName)
-        : mTextureName(textureName), mTextureId(0) {}
-
-    GLTexture(const std::string& textureName, GLint textureId)
-        : mTextureName(textureName), mTextureId(textureId) {}
-
-    GLTexture(const GLTexture& other) = delete;
-    GLTexture(GLTexture&& other) noexcept
-        : mTextureName(std::move(other.mTextureName)),
-        mTextureId(other.mTextureId) {
-        other.mTextureId = 0;
-    }
-    GLTexture& operator=(const GLTexture& other) = delete;
-    GLTexture& operator=(GLTexture&& other) noexcept {
-        mTextureName = std::move(other.mTextureName);
-        std::swap(mTextureId, other.mTextureId);
-        return *this;
-    }
-    ~GLTexture() noexcept {
-        if (mTextureId)
-            glDeleteTextures(1, &mTextureId);
-    }
-
-    GLuint texture() const { return mTextureId; }
-    const std::string& textureName() const { return mTextureName; }
-
-    /**
-    *  Load a file in memory and create an OpenGL texture.
-    *  Returns a handle type (an std::unique_ptr) to the loaded pixels.
-    */
-    handleType load(const std::string& fileName) {
-        if (mTextureId) {
-            glDeleteTextures(1, &mTextureId);
-            mTextureId = 0;
-        }
-        int force_channels = 0;
-        int w, h, n;
-        handleType textureData(stbi_load(fileName.c_str(), &w, &h, &n, force_channels), stbi_image_free);
-        if (!textureData){
-            throw std::invalid_argument("Could not load texture data from file " + fileName);}
-        glGenTextures(1, &mTextureId);
-        glBindTexture(GL_TEXTURE_2D, mTextureId);
-        GLint internalFormat;
-        GLint format;
-        switch (n) {
-            case 1: internalFormat = GL_R8; format = GL_RED; break;
-            case 2: internalFormat = GL_RG8; format = GL_RG; break;
-            case 3: internalFormat = GL_RGB8; format = GL_RGB; break;
-            case 4: internalFormat = GL_RGBA8; format = GL_RGBA; break;
-            default: internalFormat = 0; format = 0; break;
-        }
-        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, w, h, 0, format, GL_UNSIGNED_BYTE, textureData.get());
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        return textureData;
-    }
-
-private:
-    std::string mTextureName;
-    GLuint mTextureId;
-};
 
 //
 // Some helper/ utility functions
@@ -345,7 +274,7 @@ float diffuseScale  = .4;
 float ambientScale  = .3;
 float specularScale = .5;
 
-vec3 lightpos     = vec3( 1.0, 1.0, -5.0 );
+vec3 lightpos     = vec3( 1.0, 3.0, -5.0 );
 vec3 white        = vec3( 1.0, 1.0, 1.0); 
 vec3 objcolor;
 vec3 viewpos      = vec3( 0.0, 0.0, -5.0);
@@ -527,6 +456,12 @@ public:
     mShader.uploadAttrib("normal", normals );
     mShader.setUniform("viewpos", viewpos);
     mShader.setUniform("lightpos", lightpos );
+
+    assert( mAxis.size() == 0 );
+    for ( int i = 0; i < axisSamples; ++i ) {
+      mAxis.push_back( 0.0 );
+    }
+    assert( mAxis.size() == axisSamples );
   }
 
   ~PidSimFrontEnd() 
@@ -608,17 +543,13 @@ public:
     mShader.setUniform("camera", camera);
     mShader.setUniform("model", baseModel );
     static int count = 0;
-    if ( count < 3 ) { std::cout << "c0\n"; }
     mShader.drawIndexed(GL_TRIANGLES, base_TRIANGLE_START, base_TRIANGLE_END);
-    if ( count < 3 ) { std::cout << "c1\n"; }
 
     mShader.bind();
     mShader.setUniform("projection", projection);
     mShader.setUniform("camera", camera);
     mShader.setUniform("model", armModel );
-    if ( count < 3 ) { std::cout << "c2\n"; }
     mShader.drawIndexed(GL_TRIANGLES, arm_TRIANGLE_START, arm_TRIANGLE_END - arm_TRIANGLE_START );
-    if ( count < 3 ) { std::cout << "c3\n"; }
     ++count;
 
     glViewport( 
@@ -626,7 +557,14 @@ public:
       viewPortWidth, mSize.y()-viewPortHeight );
     glDisable( GL_DEPTH_TEST );
  
-    populateGraphIndices();
+    assert( mAxis.size() == axisSamples );
+    std::pair<int,int> position(0,0);
+    position = populateGraphIndices( mActualError, position, 1.0 );
+    position = populateGraphIndices( mAxis, position, 2.0 );
+    assert( position.first  == numGraphPositions );
+    assert( position.second == numGraphIndices );
+
+
     mGrapher.bind();
     mGrapher.uploadIndices(graphIndices);
     mGrapher.uploadAttrib("position", graphPositions);
@@ -672,44 +610,36 @@ public:
     mActualError.at( samplesToRecord-1 ) = errorAngle;
   }
 
-  void populateGraphIndices()
+  std::pair<int,int> populateGraphIndices( 
+    const std::vector<std::optional<double>> toPlot,
+    std::pair<int,int> startData,
+    double color
+  )
   {
-    double dim = 2.0f;
-    double xLeft  = -dim/2;
-    double xRight =  dim/2;
+    const int startPos = startData.first;
+    const int startIndex = startData.second;
+    const int samples = toPlot.size();
+    const double dim = 2.0f;
+    const double xLeft  = -dim/2;
+    const double xRight =  dim/2;
+    const double lineThickness = 0.5;
+    const double xInc = dim / ((double) (samples-1) );
+
     double x = xLeft;
-    double xInc = dim / ((double) (samplesToRecord-1) );
-    int validCount = 0;
-    double lineThickness = 0.5;
-
-    const double zero = 0.0;
-    graphPositions.col(0) << xLeft,  zero-lineThickness, -1, 2;
-    graphPositions.col(1) << xLeft,  zero              ,  0, 2;
-    graphPositions.col(2) << xLeft,  zero+lineThickness,  1, 2;
-    graphPositions.col(3) << xRight, zero-lineThickness, -1, 2;
-    graphPositions.col(4) << xRight, zero              ,  0, 2;
-    graphPositions.col(5) << xRight, zero+lineThickness,  1, 2;
-
-    graphIndices.col( 0 ) << 0, 3, 4; 
-    graphIndices.col( 1 ) << 0, 4, 1;
-    graphIndices.col( 2 ) << 1, 4, 5; 
-    graphIndices.col( 3 ) << 1, 5, 2; 
-
-    for ( int i = 0; i < samplesToRecord; ++i ) 
+    for ( int i = 0; i < samples; ++i ) 
     {
-      int base = i*3 + 6;
+      int base = i*3 + startPos;
 
       int before = i > 0 ? i-1 : i;
-      int after  = i < samplesToRecord -1 ? i+1 : samplesToRecord-1;
+      int after  = i < samples-1 ? i+1 : samples-1;
 
-      const bool sampleValid = mActualError.at( before ) && mActualError.at( i ) && mActualError.at( after );
+      const bool sampleValid = toPlot.at( before ) && toPlot.at( i ) && toPlot.at( after );
 
       if ( sampleValid ) {
-        ++validCount;
-        double y = mActualError.at( i ).value() / 10.0f;
-        graphPositions.col(base + 0) << x, y-lineThickness, -1.0, 1.0;
-        graphPositions.col(base + 1) << x, y+0,              0.0, 1.0;
-        graphPositions.col(base + 2) << x, y+lineThickness,  1.0, 1.0;
+        double y = toPlot.at( i ).value() / 10.0f;
+        graphPositions.col(base + 0) << x, y-lineThickness, -1.0, color;
+        graphPositions.col(base + 1) << x, y+0,              0.0, color;
+        graphPositions.col(base + 2) << x, y+lineThickness,  1.0, color;
       }
       else {
         graphPositions.col(base + 0) << x, 0, -1.0, 0;
@@ -718,34 +648,40 @@ public:
       }
       x+=xInc;
     }
-    for ( int i = 0; i < samplesToRecord-1; ++i ) 
+    for ( int i = 0; i < samples-1; ++i ) 
     {
-      int base = 4+i*4;
-      int basePos = i*3+6;
+      int base =    startIndex + i*4;
+      int basePos = startPos   + i*3;
 
       graphIndices.col( base + 0 ) << basePos+0, basePos+3, basePos+ 4; 
       graphIndices.col( base + 1 ) << basePos+0, basePos+4, basePos+ 1;
       graphIndices.col( base + 2 ) << basePos+1, basePos+4, basePos+ 5; 
       graphIndices.col( base + 3 ) << basePos+1, basePos+5, basePos+ 2; 
-
     }
+
+    const int endPos = startPos + samples*3;
+    const int endIndex = startIndex + (samples-1)*4;
+
+    return std::pair<int,int>( endPos, endIndex );
   }
+
+  int getSamplesPerSecond() { return samplesPerSecond; }
 
 private:
 
-  static constexpr int       secondsToDisplay = 5;
-  static constexpr size_t    samplesToRecord = secondsToDisplay * 5;
-  static constexpr int       axisSegments = 2;
+  static constexpr int       secondsToDisplay = 15;
+  static constexpr int       samplesPerSecond = 10;
+  static constexpr size_t    samplesToRecord = samplesPerSecond * secondsToDisplay;
+  static constexpr size_t    axisSamples = 30;
 
   // For each sample, record top, middle, botton for graph
   static constexpr int numGraphPositions = 
-      3 * samplesToRecord +       // For each sample
-      6;                          // For the axis line                     
-  static constexpr int numGraphIndices   = 
-      4 * (samplesToRecord-1) +   // For each sample
-      4;                          // For the axis line
+      3 * (samplesToRecord + axisSamples );
+  static constexpr int numGraphIndices   =
+      4 * ((samplesToRecord-1)+(axisSamples-1)); 
 
-  std::vector<std::optional<double>> mActualError{ samplesToRecord };
+  std::vector<std::optional<double>> mActualError;
+  std::vector<std::optional<double>> mAxis;
 
   double              mArmAngle = 0.0;
   double              mStartAngle;
@@ -841,7 +777,8 @@ class PidSimBackEnd
     double error = mAngle - mTargetAngle;
 
     static int counter=0;
-    if( (counter % 10) == 0 ) {
+    int sampleInterval = 50 / mFrontEnd->getSamplesPerSecond();
+    if( (counter % sampleInterval ) == 0 ) {
       mFrontEnd->recordActualError( radToDeg(error) );
     }
     ++counter;
