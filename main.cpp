@@ -41,6 +41,7 @@
 #include <memory>
 #include <utility>
 #include <chrono>
+#include <numeric>
 
 #if defined(__GNUC__)
 #  pragma GCC diagnostic ignored "-Wmissing-field-initializers"
@@ -248,7 +249,7 @@ out vec3 FragNormalIn;
 out vec3 FragPos;
 
 void main() {
-  FragPos = vec3(position.x, position.y*.04, 0.0 );
+  FragPos = vec3(position.x, position.y*.08, 0.0 );
   gl_Position = vec4(FragPos, 1 );
   colorIndex = position.w;
   FragNormalIn = vec3( 0.0, position.z, -(1.0-abs(position.z)) );
@@ -287,6 +288,10 @@ void main() {
   }
   else if ( colorIndex > 1.99 && colorIndex < 2.01 ) {
     objcolor  = vec3( 0.0, 0.0, 1.0 );
+    alpha = 1.0;
+  }
+  else if ( colorIndex > 2.99 && colorIndex < 3.01 ) {
+    objcolor  = vec3( 0.0, 1.0, 0.0 );
     alpha = 1.0;
   }
   else {
@@ -413,8 +418,8 @@ public:
     Widget *panel = new Widget(window);
     panel->setLayout(new BoxLayout(Orientation::Horizontal,
         Alignment::Middle, 0, 20));
-    mStart= new Button( panel, "Start" );
-    mStart->setFlags( Button::ToggleButton );
+    auto newSettings = new Button( panel, "New Settings" );
+    newSettings->setCallback( [&] (void) { mNewSettings = true; }); 
     auto reset = new Button( panel, "Reset" );
     reset->setCallback( [&] (void) { mReset =true; }); 
 
@@ -559,8 +564,9 @@ public:
  
     assert( mAxis.size() == axisSamples );
     std::pair<int,int> position(0,0);
-    position = populateGraphIndices( mActualError, position, 1.0 );
     position = populateGraphIndices( mAxis, position, 2.0 );
+    position = populateGraphIndices( mIError, position, 3.0 );
+    position = populateGraphIndices( mPError, position, 1.0 );
     assert( position.first  == numGraphPositions );
     assert( position.second == numGraphIndices );
 
@@ -575,6 +581,13 @@ public:
   {
     bool result = mReset;
     mReset=false;
+    return result;
+  }
+
+  bool isNewSettings()
+  {
+    bool result = mNewSettings;
+    mNewSettings=false;
     return result;
   }
 
@@ -594,20 +607,24 @@ public:
 
   void resetErrorRecord()
   {
-    mActualError.clear();
+    mPError.clear();
+    mIError.clear();
     for ( size_t i = 0; i < samplesToRecord; ++i ) {
-      mActualError.push_back( std::nullopt );
+      mPError.push_back( std::nullopt );
+      mIError.push_back( std::nullopt );
     }
   }
 
-  void recordActualError( double errorAngle )
+  void recordActualError( double pError, double iError )
   {
     //Not the cleverist way to do this, but CPU is cheap.
     size_t samplesToMove = samplesToRecord - 1;
     for ( size_t i = 0; i < samplesToMove; ++i ) {
-      mActualError.at( i ) = mActualError.at( i+1 );
+      mPError.at( i ) = mPError.at( i+1 );
+      mIError.at( i ) = mIError.at( i+1 );
     }
-    mActualError.at( samplesToRecord-1 ) = errorAngle;
+    mPError.at( samplesToRecord-1 ) = pError;
+    mIError.at( samplesToRecord-1 ) = iError;
   }
 
   std::pair<int,int> populateGraphIndices( 
@@ -667,6 +684,9 @@ public:
 
   int getSamplesPerSecond() { return samplesPerSecond; }
 
+  double getP() { return mPidP; }
+  double getI() { return mPidI; }
+
 private:
 
   static constexpr int       secondsToDisplay = 15;
@@ -676,11 +696,12 @@ private:
 
   // For each sample, record top, middle, botton for graph
   static constexpr int numGraphPositions = 
-      3 * (samplesToRecord + axisSamples );
+      3 * (2*samplesToRecord + axisSamples );
   static constexpr int numGraphIndices   =
-      4 * ((samplesToRecord-1)+(axisSamples-1)); 
+      4 * (2*(samplesToRecord-1)+(axisSamples-1)); 
 
-  std::vector<std::optional<double>> mActualError;
+  std::vector<std::optional<double>> mPError;
+  std::vector<std::optional<double>> mIError;
   std::vector<std::optional<double>> mAxis;
 
   double              mArmAngle = 0.0;
@@ -691,10 +712,10 @@ private:
   double              mPidI;
   double              mPidD;
   bool                mReset = false;
+  bool                mNewSettings = false;
   nanogui::GLShader   mShader;
   nanogui::GLShader   mGrapher;
   nanogui::TextBox*   mAngleCurrent; 
-  nanogui::Button*    mStart;
 
   nanogui::MatrixXf graphPositions;
   nanogui::MatrixXu graphIndices;
@@ -723,22 +744,39 @@ class PidSimBackEnd
  
   private:
 
+  void softReset()
+  {
+    mPidP = mFrontEnd->getP();
+    mPidI = mFrontEnd->getI();
+    mTargetAngle = degToRad(mFrontEnd->getTargetAngle());
+  }
+
   void reset()
   {
     mAngle       = degToRad(mFrontEnd->getStartAngle());
-    mTargetAngle = degToRad(mFrontEnd->getTargetAngle());
     mAngleVel= 0;
     mFrontEnd->resetErrorRecord();
+    mIError.clear();
+    for ( int idx = 0; idx < mISamples; ++idx ) {
+      mIError.push_back(0.0);
+    }
+    mIPos = 0;
+    mISError = 0;
+    softReset();
   }
 
   void updateOneTick()
   {
     // Run simulation 50x a second.
-    double timeSlice = 1.0/50.0;
+    double timeSlice = 1.0/((double) updatesPerSecond);
 
     if ( mFrontEnd->isReset() ) {
       reset();
     }
+    if ( mFrontEnd->isNewSettings()) {
+      softReset();
+    }
+
     double armX = cos( mAngle );
     double armY = sin( mAngle );
     // Gravity = < 0   , -9.8 >
@@ -748,8 +786,8 @@ class PidSimBackEnd
 
     // Accellaration to Velocity integration
     mAngleVel += AngleAccel * timeSlice;
-    // damping.  Lose 3% of angular vel every 50th/ second.
-    mAngleVel *= .97; 
+    // damping.  Lose 5% of angular vel every 50th/ second.
+    mAngleVel *= .95; 
 
     // Velocity to Angle integration
     mAngle += mAngleVel * timeSlice;
@@ -777,12 +815,26 @@ class PidSimBackEnd
     double error = mAngle - mTargetAngle;
 
     static int counter=0;
-    int sampleInterval = 50 / mFrontEnd->getSamplesPerSecond();
-    if( (counter % sampleInterval ) == 0 ) {
-      mFrontEnd->recordActualError( radToDeg(error) );
-    }
+    int sampleInterval = updatesPerSecond / mFrontEnd->getSamplesPerSecond();
     ++counter;
 
+    mIError.at( mIPos ) = error;
+    mIPos = ( mIPos + 1 ) % mISamples;
+
+    mISError += error;
+    double iError = mISError * timeSlice; 
+
+    double pTerm = error * mPidP;
+    double iTerm = iError * mPidI;
+    double dTerm = 0;
+
+    double all = pTerm + iTerm + dTerm;
+
+    mAngleVel -= all/5;
+
+    if( (counter % sampleInterval ) == 0 ) {
+      mFrontEnd->recordActualError( radToDeg(error), radToDeg( iError ));
+    }
     updateFrontEnd();
   }
 
@@ -791,13 +843,26 @@ class PidSimBackEnd
     mFrontEnd->setArmAngle( mAngle );
   }
 
+  private:
+
+  static constexpr int secondsOfIMemory = 5;
+  static constexpr int updatesPerSecond = 50;
+  static constexpr int mISamples = secondsOfIMemory * updatesPerSecond;
+
+  std::vector<double> mIError;
+  size_t mIPos;
+
   double time = 0.0f;
   // map mAngle to "screen space" with <x,y> = <cos(mAngle),sin(mAngle)>
   double mAngle = 0;
   double mAngleVel = 0;
 
+  double mPidP = 0;
+  double mPidI = 0;
+
   // From the front end
   double mTargetAngle = 0;
+  double mISError = 0;
 
   nanogui::ref<PidSimFrontEnd> mFrontEnd;
 };
