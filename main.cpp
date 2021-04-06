@@ -99,17 +99,34 @@ double radToDeg( double radians )
 }
 
 
-nanogui::TextBox* make_slider( 
-  nanogui::Widget*                    window,
+///
+/// Create a slider with a label
+///
+/// @param[in] parent          The object that will own the slider+label
+/// @param[in] labelText       The text for the slider.
+/// @param[in] sliderStartPos  Where the slider should start.  From 0-1
+/// @param[in] sliderToLabel   Function that creates a label for a slider
+/// @param[in] units           What units does the slider represent?
+/// @param[in] noSlider        Just make a label and output, but keep the
+///                            formatting consistent.
+///
+/// @return A non-owning pointer to the text box that displayers the 
+///         slider's value.  Ownership of objects created is held by 
+///         parent.
+///
+/// TODO - the noSlider objects is ugly.  Find a way to refactor?
+/// 
+TextBox* makeSlider( 
+  nanogui::Widget*                    parent,
   const std::string&                  labelText,
-  float                               slider_start_pos,
-  std::function<std::string(float)>   slider_to_label,
+  float                               sliderStartPos,
+  std::function<std::string(float)>   sliderToLabel,
   const std::string&                  units,
   bool                                noSlider = false
 )
 {
   using namespace nanogui;
-  Widget *panel = new Widget(window);
+  Widget *panel = new Widget(parent);
   panel->setLayout(new BoxLayout(Orientation::Horizontal,
       Alignment::Middle, 0, 20));
   Label *label = new Label(panel, labelText, "sans-bold");
@@ -118,7 +135,7 @@ nanogui::TextBox* make_slider(
   Slider *slider;
   if ( !noSlider ) {
     slider = new Slider(panel);
-    slider->setValue(slider_start_pos);
+    slider->setValue(sliderStartPos);
     slider->setFixedWidth(80);
   }
   else {
@@ -128,14 +145,14 @@ nanogui::TextBox* make_slider(
 
   TextBox *textBox = new TextBox(panel);
   textBox->setFixedSize(Vector2i(90, 25));
-  textBox->setValue(slider_to_label(slider_start_pos));
+  textBox->setValue(sliderToLabel(sliderStartPos));
   textBox->setUnits(units);
 
   if ( !noSlider ) {
-    slider->setCallback([textBox,slider_to_label](float value) 
-      { textBox->setValue(slider_to_label(value)); } 
+    slider->setCallback([textBox,sliderToLabel](float value) 
+      { textBox->setValue(sliderToLabel(value)); } 
     );
-    slider->setFinalCallback([slider_to_label](float value) {
+    slider->setFinalCallback([sliderToLabel](float value) {
     });
   }
   textBox->setFixedSize(Vector2i(80,25));
@@ -174,6 +191,15 @@ void main() {
   FragPos    = vec3(model * vec4( position, 1.0 ));
 }
 )";
+
+// Constants for feeding colors into the shader that draw the
+// bar graph.
+
+constexpr double ShaderRed    = 1.0;
+constexpr double ShaderGreen  = 2.0;
+constexpr double ShaderPurple = 3.0;
+constexpr double ShaderOrange = 4.0;
+constexpr double ShaderBlue   = 5.0;
 
 //
 // @brief OpenGL style Fragment Shader
@@ -281,28 +307,32 @@ vec3 viewpos      = vec3( 0.0, 0.0, -5.0);
 float alpha;
 
 void main() {
+  //
+  // TODO - LOL, this works, but ++ugly.  Right now we seem
+  // to have CPU to burn.
+  //
   if ( colorIndex > .99 && colorIndex < 1.01 ) {
-    objcolor  = vec3( 1.0, 0.2, 0.2 );
+    objcolor  = vec3( 1.0, 0.2, 0.2 );  // Red
     alpha = 1.0;
   }
   else if ( colorIndex > 1.99 && colorIndex < 2.01 ) {
-    objcolor  = vec3( 0.0, 1.0, 0.0 );
+    objcolor  = vec3( 0.0, 1.0, 0.0 );  // Green
     alpha = 1.0;
   }
   else if ( colorIndex > 2.99 && colorIndex < 3.01 ) {
-    objcolor  = vec3( 1.0, 0.0, 1.0 );
+    objcolor  = vec3( 1.0, 0.0, 1.0 );  // Magenta/ Purple
     alpha = 1.0;
   }
   else if ( colorIndex > 3.99 && colorIndex < 4.01 ) {
-    objcolor  = vec3( 1.0, 1.0, 0.0 );
+    objcolor  = vec3( 1.0, 1.0, 0.0 );  // Orange
     alpha = 1.0;
   }
   else if ( colorIndex > 4.99 && colorIndex < 5.01 ) {
-    objcolor  = vec3( 0.5, 0.5, 1.0 );
+    objcolor  = vec3( 0.5, 0.5, 1.0 );  // Light Blue
     alpha = 1.0;
   }
   else {
-    objcolor  = vec3( 0.0, 0.0, 0.0 );
+    objcolor  = vec3( 0.0, 0.0, 0.0 );  // Black
     alpha = 0.0;
   }
 
@@ -389,31 +419,31 @@ public:
     };
 
     new Label(window, "Arm Start Position", "sans-bold");
-    make_slider( window, "Start Arm Angle", 0.0, 
+    makeSlider( window, "Start Arm Angle", 0.0, 
       [&](float slider) { return sliderToDegrees( mStartAngle, slider ); } ,
       "deg" );
 
-    make_slider( window, "Target Arm Angle",  0.5,
+    makeSlider( window, "Target Arm Angle",  0.5,
       [&](float slider) { return sliderToDegrees( mTargetAngle, slider ); }, 
       "deg" );
 
     new Label(window, "Arm Current Position", "sans-bold");
-    mAngleCurrent = make_slider( window, "Arm Angle", 0.0, 
+    mAngleCurrent = makeSlider( window, "Arm Angle", 0.0, 
       [&](float slider) { return ""; }, "deg", true );
 
     new Label(window, "PID Settings", "sans-bold");
-    make_slider( window, "P", 0, 
+    makeSlider( window, "P", 0, 
       [&](float slider) { return sliderToPid( mPidP, slider ); }, "" );
-    make_slider( window, "I", 0, 
+    makeSlider( window, "I", 0, 
       [&](float slider) { return sliderToPid( mPidI, slider ); }, "" );
-    make_slider( window, "D", 0, 
+    makeSlider( window, "D", 0, 
       [&](float slider) { return sliderToPid( mPidD, slider ); }, "" );
 
     new Label(window, "Simulation Settings", "sans-bold");
-    make_slider( window, "Rolling Friction", .2, 
+    makeSlider( window, "Rolling Friction", .2, 
       [&](float slider ) { return sliderTo10( mRollingFriction, slider );}, 
       "" );
-    make_slider( window, "Static Friction", 0, 
+    makeSlider( window, "Static Friction", 0, 
       [&](float slider ) { return sliderTo10( mStaticFriction, slider );}, 
       "" );
 
@@ -432,17 +462,17 @@ public:
     Widget *panel2 = new Widget(window);
     panel2->setLayout(new BoxLayout(Orientation::Horizontal,
         Alignment::Middle, 0, 20));
-    auto nudgeUp = new Button( panel2, "Sm Up" );
+    auto nudgeUp = new Button( panel2, "Small Push Up" );
     nudgeUp->setCallback( [&] (void) { mNudgeUp =true; }); 
-    auto nudgeDown = new Button( panel2, "Sm Dn" );
+    auto nudgeDown = new Button( panel2, "Small Push Down" );
     nudgeDown ->setCallback( [&] (void) { mNudgeDown =true; }); 
 
     Widget *panel3 = new Widget(window);
     panel3->setLayout(new BoxLayout(Orientation::Horizontal,
         Alignment::Middle, 0, 20));
-    auto wackUp = new Button( panel2, "Lg Up" );
+    auto wackUp = new Button( panel3, "Large Push Up" );
     wackUp->setCallback( [&] (void) { mWackUp =true; }); 
-    auto wackDown = new Button( panel2, "Lg Dn" );
+    auto wackDown = new Button( panel3, "Large Push Down" );
     wackDown->setCallback( [&] (void) { mWackDown =true; }); 
 
     Widget *keyLayout= new Widget(this);
@@ -597,14 +627,13 @@ public:
  
     assert( mAxis.size() == axisSamples );
     std::pair<int,int> position(0,0);
-    position = populateGraphIndices( mAxis, position, 2.0 );
-    position = populateGraphIndices( mPError, position, 1.0 );
-    position = populateGraphIndices( mIError, position, 3.0 );
-    position = populateGraphIndices( mDError, position, 4.0 );
-    position = populateGraphIndices( mMotor, position, 5.0 );
+    position = populateGraphIndices( mAxis,   position, ShaderGreen  );
+    position = populateGraphIndices( mPError, position, ShaderRed    );
+    position = populateGraphIndices( mIError, position, ShaderPurple );
+    position = populateGraphIndices( mDError, position, ShaderOrange );
+    position = populateGraphIndices( mMotor,  position, ShaderBlue   );
     assert( position.first  == numGraphPositions );
     assert( position.second == numGraphIndices );
-
 
     mGrapher.bind();
     mGrapher.uploadIndices(graphIndices);
