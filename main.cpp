@@ -561,7 +561,7 @@ public:
     double angleRad = -mArmAngle + M_PI/2;
 
     double viewPortWidth =mSize.x()/2;
-    double viewPortHeight=mSize.y()*2/3;
+    double viewPortHeight=mSize.y()*3/4;
 
     Matrix4f baseModel;
     baseModel.setIdentity();
@@ -577,7 +577,7 @@ public:
 
     Matrix4f camera;
     camera.setIdentity();
-    camera.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf(-M_PI/2 + M_PI/8,  Vector3f::UnitX()));
+    camera.topLeftCorner<3,3>() = Matrix3f(Eigen::AngleAxisf(-M_PI/2 + M_PI/10,  Vector3f::UnitX()));
     camera(0,3) = -7*1.4;
     camera(1,3) = -12*1.4;
     camera(2,3) = -40*1.4;
@@ -620,9 +620,10 @@ public:
     mShader.drawIndexed(GL_TRIANGLES, arm_TRIANGLE_START, arm_TRIANGLE_END - arm_TRIANGLE_START );
     ++count;
 
+    double graphViewPortHeight = mSize.y()/3;
     glViewport( 
-      mSize.x()/2, viewPortHeight,
-      viewPortWidth, mSize.y()-viewPortHeight );
+      mSize.x()/2, mSize.y()-graphViewPortHeight,
+      viewPortWidth, graphViewPortHeight );
     glDisable( GL_DEPTH_TEST );
  
     assert( mAxis.size() == axisSamples );
