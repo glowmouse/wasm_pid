@@ -423,25 +423,27 @@ public:
     Widget *panel = new Widget(window);
     panel->setLayout(new BoxLayout(Orientation::Horizontal,
         Alignment::Middle, 0, 20));
-    auto newSettings = new Button( panel, "New Settings" );
+    auto newSettings = new Button( panel, "Update" );
     newSettings->setCallback( [&] (void) { mNewSettings = true; }); 
     auto reset = new Button( panel, "Reset" );
     reset->setCallback( [&] (void) { mReset =true; }); 
+    mSlowTimeButton = new Button( panel, "Slow Time" );
+    mSlowTimeButton->setCallback( [&] (void) { mSlowTime =true; }); 
 
     Widget *panel2 = new Widget(window);
     panel2->setLayout(new BoxLayout(Orientation::Horizontal,
         Alignment::Middle, 0, 20));
-    auto nudgeUp = new Button( panel2, "Nudge Up" );
+    auto nudgeUp = new Button( panel2, "Sm Up" );
     nudgeUp->setCallback( [&] (void) { mNudgeUp =true; }); 
-    auto nudgeDown = new Button( panel2, "Nudge Down" );
+    auto nudgeDown = new Button( panel2, "Sm Dn" );
     nudgeDown ->setCallback( [&] (void) { mNudgeDown =true; }); 
 
     Widget *panel3 = new Widget(window);
     panel3->setLayout(new BoxLayout(Orientation::Horizontal,
         Alignment::Middle, 0, 20));
-    auto wackUp = new Button( panel3, "Wack Up" );
+    auto wackUp = new Button( panel2, "Lg Up" );
     wackUp->setCallback( [&] (void) { mWackUp =true; }); 
-    auto wackDown = new Button( panel3, "Wack Down" );
+    auto wackDown = new Button( panel2, "Lg Dn" );
     wackDown->setCallback( [&] (void) { mWackDown =true; }); 
 
     Widget *keyLayout= new Widget(this);
@@ -654,6 +656,18 @@ public:
     return result;
   }
 
+  bool isSlowTime()
+  {
+    bool result = mSlowTime;
+    mSlowTime =false;
+
+    if ( result ) {
+      mSlowTimeState = !mSlowTimeState;
+      mSlowTimeButton->setCaption( mSlowTimeState ? "Speed Time" : "Slow Time" );
+    }
+    return mSlowTimeState;
+  }
+
   void setArmAngle( double angle ) {
     int intAngle = radToDeg(angle);
     mAngleCurrent->setValue( std::to_string( intAngle ));
@@ -791,6 +805,9 @@ private:
   double              mRollingFriction;
   bool                mReset = false;
   bool                mNewSettings = false;
+  bool                mSlowTime = false;
+  bool                mSlowTimeState = false;
+  Button*             mSlowTimeButton = nullptr;
   bool                mNudgeDown = false;
   bool                mNudgeUp = false;
   bool                mWackDown = false;
@@ -847,15 +864,13 @@ class PidSimBackEnd
 
   void updateOneTick()
   {
-    // Run simulation 50x a second.
-    double timeSlice = 1.0/((double) updatesPerSecond);
-
     if ( mFrontEnd->isReset() ) {
       reset();
     }
     if ( mFrontEnd->isNewSettings()) {
       softReset();
     }
+    mSlowTime = mFrontEnd->isSlowTime();
     if ( mFrontEnd->isNudgeUp()) {
       mAngleVel += 3;
     }
@@ -869,6 +884,18 @@ class PidSimBackEnd
       mAngleVel -= 10;
     }
 
+    ++mCounter0;
+    if ( mSlowTime ) {
+      if ( (mCounter0 % 10 ) != 0 ) {
+        return;
+      }
+    }
+
+    ++mCounter1;
+
+    // Run simulation 50x a second.
+    double timeSlice = 1.0/((double) updatesPerSecond);
+
     double armX = cos( mAngle );
     double armY = sin( mAngle );
     // Gravity = < 0   , -9.8 >
@@ -878,9 +905,7 @@ class PidSimBackEnd
 
     // Compute and record the error.
 
-    static int counter=0;
     int sampleInterval = updatesPerSecond / mFrontEnd->getSamplesPerSecond();
-    ++counter;
 
     double pError = mAngle - mTargetAngle;
     mIError += pError;
@@ -893,7 +918,7 @@ class PidSimBackEnd
     double dTerm = dError * mPidD;
 
     double all = pTerm + iTerm + dTerm;
-    all = std::max(-10.0, std::min( all, 10.0 ));
+    all = std::max(-2.0, std::min( all, 2.0 ));
 
     AngleAccel -= all/5/timeSlice;
     if ( AngleAccel > 0 ) {
@@ -930,7 +955,7 @@ class PidSimBackEnd
     }
 
 
-    if( (counter % sampleInterval ) == 0 ) {
+    if( (mCounter1 % sampleInterval ) == 0 ) {
       mFrontEnd->recordActualError( radToDeg(pError), radToDeg( iError ), radToDeg( dError), -all*50 );
     }
     updateFrontEnd();
@@ -955,11 +980,13 @@ class PidSimBackEnd
   double mPidD = 0;
   double mRollingFriction = 0;
   double mStaticFriction= 0;
-
-  // From the front end
-  double mTargetAngle = 0;
   double mIError = 0;
   double mLastPError = 0;
+  double mTargetAngle = 0;
+
+  bool mSlowTime = false;
+  unsigned int mCounter0=0;
+  unsigned int mCounter1=0;
 
   nanogui::ref<PidSimFrontEnd> mFrontEnd;
 };
