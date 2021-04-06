@@ -428,6 +428,22 @@ public:
     auto reset = new Button( panel, "Reset" );
     reset->setCallback( [&] (void) { mReset =true; }); 
 
+    Widget *panel2 = new Widget(window);
+    panel2->setLayout(new BoxLayout(Orientation::Horizontal,
+        Alignment::Middle, 0, 20));
+    auto nudgeUp = new Button( panel2, "Nudge Up" );
+    nudgeUp->setCallback( [&] (void) { mNudgeUp =true; }); 
+    auto nudgeDown = new Button( panel2, "Nudge Down" );
+    nudgeDown ->setCallback( [&] (void) { mNudgeDown =true; }); 
+
+    Widget *panel3 = new Widget(window);
+    panel3->setLayout(new BoxLayout(Orientation::Horizontal,
+        Alignment::Middle, 0, 20));
+    auto wackUp = new Button( panel3, "Wack Up" );
+    wackUp->setCallback( [&] (void) { mWackUp =true; }); 
+    auto wackDown = new Button( panel3, "Wack Down" );
+    wackDown->setCallback( [&] (void) { mWackDown =true; }); 
+
     //Window *chartWindow = new Window(this, "PID Stats over Time");
     //chartWindow->setPosition(Vector2i( mSize.x()/2, 15));
     //chartWindow->setFixedSize(Vector2i( mSize.x()/2-15, mSize.y()*.4-30 ));
@@ -591,6 +607,35 @@ public:
     return result;
   }
 
+  bool isNudgeDown()
+  {
+    bool result = mNudgeDown;
+    mNudgeDown=false;
+    return result;
+  }
+
+  bool isNudgeUp()
+  {
+    bool result = mNudgeUp;
+    mNudgeUp=false;
+    return result;
+  }
+
+  bool isWackDown()
+  {
+    bool result = mWackDown;
+    mWackDown=false;
+    return result;
+  }
+
+  bool isWackUp()
+  {
+    bool result = mWackUp;
+    mWackUp=false;
+    return result;
+  }
+
+
   bool isNewSettings()
   {
     bool result = mNewSettings;
@@ -735,6 +780,10 @@ private:
   double              mRollingFriction;
   bool                mReset = false;
   bool                mNewSettings = false;
+  bool                mNudgeDown = false;
+  bool                mNudgeUp = false;
+  bool                mWackDown = false;
+  bool                mWackUp = false;
   nanogui::GLShader   mShader;
   nanogui::GLShader   mGrapher;
   nanogui::TextBox*   mAngleCurrent; 
@@ -771,7 +820,7 @@ class PidSimBackEnd
     mPidP = mFrontEnd->getP();
     mPidI = mFrontEnd->getI();
     mPidD = mFrontEnd->getD();
-    mRollingFriction = mFrontEnd->getRollingFriction()/10.0;
+    mRollingFriction = mFrontEnd->getRollingFriction()/50.0;
     mStaticFriction= mFrontEnd->getStaticFriction();
     mTargetAngle = degToRad(mFrontEnd->getTargetAngle());
   }
@@ -795,6 +844,18 @@ class PidSimBackEnd
     }
     if ( mFrontEnd->isNewSettings()) {
       softReset();
+    }
+    if ( mFrontEnd->isNudgeUp()) {
+      mAngleVel += 3;
+    }
+    if ( mFrontEnd->isNudgeDown()) {
+      mAngleVel -= 3;
+    }
+    if ( mFrontEnd->isWackUp()) {
+      mAngleVel += 10;
+    }
+    if ( mFrontEnd->isWackDown()) {
+      mAngleVel -= 10;
     }
 
     double armX = cos( mAngle );
@@ -821,6 +882,7 @@ class PidSimBackEnd
     double dTerm = dError * mPidD;
 
     double all = pTerm + iTerm + dTerm;
+    all = std::max(-10.0, std::min( all, 10.0 ));
 
     AngleAccel -= all/5/timeSlice;
     if ( AngleAccel > 0 ) {
