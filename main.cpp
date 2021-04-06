@@ -136,7 +136,6 @@ nanogui::TextBox* make_slider(
       { textBox->setValue(slider_to_label(value)); } 
     );
     slider->setFinalCallback([slider_to_label](float value) {
-      cout << "Final slider value: " << slider_to_label(value) << endl;
     });
   }
   textBox->setFixedSize(Vector2i(80,25));
@@ -867,9 +866,15 @@ class PidSimBackEnd
     if ( mFrontEnd->isReset() ) {
       reset();
     }
-    if ( mFrontEnd->isNewSettings()) {
-      softReset();
+    softReset();
+
+    if ( mLastPidI != mPidI ) {
+      mIError = 0;
+      mLastPidI = mPidI;
     }
+
+    //if ( mFrontEnd->isNewSettings()) {
+    //}
     mSlowTime = mFrontEnd->isSlowTime();
     if ( mFrontEnd->isNudgeUp()) {
       mAngleVel += 3;
@@ -977,6 +982,7 @@ class PidSimBackEnd
 
   double mPidP = 0;
   double mPidI = 0;
+  double mLastPidI = 0;
   double mPidD = 0;
   double mRollingFriction = 0;
   double mStaticFriction= 0;
