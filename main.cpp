@@ -444,9 +444,20 @@ public:
     auto wackDown = new Button( panel3, "Wack Down" );
     wackDown->setCallback( [&] (void) { mWackDown =true; }); 
 
-    //Window *chartWindow = new Window(this, "PID Stats over Time");
-    //chartWindow->setPosition(Vector2i( mSize.x()/2, 15));
-    //chartWindow->setFixedSize(Vector2i( mSize.x()/2-15, mSize.y()*.4-30 ));
+    Widget *keyLayout= new Widget(this);
+    keyLayout->setLayout(new BoxLayout(Orientation::Horizontal,
+        Alignment::Middle, 0, 20));
+    keyLayout->setPosition(Vector2i( mSize.x()/2, 15));
+    auto pError= new Label(keyLayout, "P Error", "sans-bold" );
+    pError ->setColor( Color( 255, 0, 0, 255 ));
+    auto iError= new Label(keyLayout, "I Error", "sans-bold" );
+    iError ->setColor( Color( 255, 0, 255, 255 ));
+    auto dError= new Label(keyLayout, "D Error", "sans-bold" );
+    dError ->setColor( Color( 255, 255, 0, 255 ));
+    auto motorOutKey = new Label(keyLayout, "Motor Output", "sans-bold" );
+    motorOutKey ->setColor( Color( 128, 128, 255, 255 ));
+    auto dAxis = new Label(keyLayout, "Error = 0 Axis", "sans-bold" );
+    dAxis ->setColor( Color( 0, 255, 0, 255 ));
 
     performLayout();
 
