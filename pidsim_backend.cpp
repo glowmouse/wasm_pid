@@ -68,13 +68,8 @@ void PidSimBackEnd::updateOneTick()
     }
   }
 
-  ++mCounter1;
-
   // Run simulation about 50x a second.
   double timeSlice = 1.0/((double) updatesPerSecond);
-
-  mArmState.resetAngAccel();
-  mArmState.applyGravity( timeSlice );
 
   // Compute and record the error.
 
@@ -90,22 +85,20 @@ void PidSimBackEnd::updateOneTick()
   double iTerm = iError * mPidI;
   double dTerm = dError * mPidD;
 
-  double all = pTerm + iTerm + dTerm;
-  all = std::max(-4.0, std::min( all, 4.0 ));
+  double allTerms = pTerm + iTerm + dTerm;
+  double motor = std::max(-4.0, std::min( -allTerms, 4.0 )) / 5.0;
 
-  mArmState.applyMotor( -all / 5, timeSlice );
-
-  // Accellaration to Velocity integration
+  mArmState.resetAngAccel();
+  mArmState.applyGravity( timeSlice );
+  mArmState.applyMotor( motor, timeSlice );
   mArmState.updateAngleVel( timeSlice );
-
   mArmState.applyFriction( mStaticFriction, mRollingFriction, timeSlice );
-
-  // Velocity to Angle integration
   mArmState.updateAngle( timeSlice );
   mArmState.imposePositionHardLimits();
 
+  ++mCounter1;
   if( (mCounter1 % sampleInterval ) == 0 ) {
-    mFrontEnd->recordActualError( radToDeg(pError), radToDeg( iError ), radToDeg( dError), -all*25);
+    mFrontEnd->recordActualError( radToDeg(pError), radToDeg( iError ), radToDeg( dError), motor * 150 );
   }
   updateFrontEnd();
 }
