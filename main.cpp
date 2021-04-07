@@ -953,18 +953,18 @@ class PidSimBackEnd
     double dTerm = dError * mPidD;
 
     double all = pTerm + iTerm + dTerm;
-    all = std::max(-2.0, std::min( all, 2.0 ));
+    all = std::max(-4.0, std::min( all, 4.0 ));
 
     AngleAccel -= all/5/timeSlice;
-    if ( AngleAccel > 0 ) {
-      AngleAccel = std::max( AngleAccel - mStaticFriction, 0.0 );
-    }
-    else {
-      AngleAccel = std::min( AngleAccel + mStaticFriction, 0.0 );
-    }
 
     // Accellaration to Velocity integration
     mAngleVel += AngleAccel * timeSlice;
+    if ( mAngleVel > 0 ) {
+      mAngleVel = std::max(mAngleVel - mStaticFriction * timeSlice, 0.0 );
+    }
+    else {
+      mAngleVel = std::min(mAngleVel + mStaticFriction * timeSlice, 0.0 );
+    }
     mAngleVel *= 1-mRollingFriction;
 
     // Velocity to Angle integration
@@ -991,7 +991,7 @@ class PidSimBackEnd
 
 
     if( (mCounter1 % sampleInterval ) == 0 ) {
-      mFrontEnd->recordActualError( radToDeg(pError), radToDeg( iError ), radToDeg( dError), -all*50 );
+      mFrontEnd->recordActualError( radToDeg(pError), radToDeg( iError ), radToDeg( dError), -all*25);
     }
     updateFrontEnd();
   }
