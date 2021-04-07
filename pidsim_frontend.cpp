@@ -6,7 +6,7 @@
 #include "nanogui/textbox.h"
 #include "nanogui/widget.h"
 #include "nanogui/window.h"
-#include "model.h"
+#include "pidsim_model.h"
 #include "pidsim_utils.h"
 #include <sstream>
 #include <iomanip>
