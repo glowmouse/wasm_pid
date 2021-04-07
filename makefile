@@ -18,7 +18,7 @@ LDFLAGS=-lGL -lm -lGLEW
 
 CFLAGS=$(INCFLAGS) $(EMFLAGS) $(NANOFLAGS) $(GLFLAGS)
 
-docs/index.html: main.cpp nanovg.wasm button.wasm checkbox.wasm colorpicker.wasm colorwheel.wasm combobox.wasm common.wasm glcanvas.wasm glutil.wasm graph.wasm imagepanel.wasm imageview.wasm label.wasm layout.wasm messagedialog.wasm popup.wasm popupbutton.wasm progressbar.wasm screen.wasm serializer.wasm slider.wasm stackedwidget.wasm tabheader.wasm tabwidget.wasm textbox.wasm theme.wasm vscrollpanel.wasm widget.wasm window.wasm nanogui_resources.wasm model.wasm
+docs/index.html: main.cpp pidsim_frontend.wasm nanovg.wasm button.wasm checkbox.wasm colorpicker.wasm colorwheel.wasm combobox.wasm common.wasm glcanvas.wasm glutil.wasm graph.wasm imagepanel.wasm imageview.wasm label.wasm layout.wasm messagedialog.wasm popup.wasm popupbutton.wasm progressbar.wasm screen.wasm serializer.wasm slider.wasm stackedwidget.wasm tabheader.wasm tabwidget.wasm textbox.wasm theme.wasm vscrollpanel.wasm widget.wasm window.wasm nanogui_resources.wasm model.wasm
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@ --preload-file ./icons
 
 nanovg.wasm: ext/nanovg.c
