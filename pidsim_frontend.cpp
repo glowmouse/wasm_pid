@@ -437,8 +437,7 @@ PidSimFrontEnd::~PidSimFrontEnd()
     mGrapher.free();
   }
 
-#ifdef LATER
-  virtual bool keyboardEvent(int key, int scancode, int action, int modifiers) 
+bool PidSimFrontEnd::keyboardEvent(int key, int scancode, int action, int modifiers) 
   {
     if (Screen::keyboardEvent(key, scancode, action, modifiers))
       return true;
@@ -450,12 +449,12 @@ PidSimFrontEnd::~PidSimFrontEnd()
     return false;
   }
 
-  virtual void draw(NVGcontext *ctx) {
+  void PidSimFrontEnd::draw(NVGcontext *ctx) {
     /* Draw the user interface */
     Screen::draw(ctx);
   }
 
-  virtual void drawContents() {
+  void PidSimFrontEnd::drawContents() {
     using namespace nanogui;
 
     double angleRad = -mArmAngle + M_PI/2;
@@ -542,35 +541,35 @@ PidSimFrontEnd::~PidSimFrontEnd()
     mGrapher.drawIndexed(GL_TRIANGLES, 0, numGraphIndices );
   }
 
-  bool isReset()
+  bool PidSimFrontEnd::isReset()
   {
     bool result = mReset;
     mReset=false;
     return result;
   }
 
-  bool isNudgeDown()
+  bool PidSimFrontEnd::isNudgeDown()
   {
     bool result = mNudgeDown;
     mNudgeDown=false;
     return result;
   }
 
-  bool isNudgeUp()
+  bool PidSimFrontEnd::isNudgeUp()
   {
     bool result = mNudgeUp;
     mNudgeUp=false;
     return result;
   }
 
-  bool isWackDown()
+  bool PidSimFrontEnd::isWackDown()
   {
     bool result = mWackDown;
     mWackDown=false;
     return result;
   }
 
-  bool isWackUp()
+  bool PidSimFrontEnd::isWackUp()
   {
     bool result = mWackUp;
     mWackUp=false;
@@ -578,14 +577,14 @@ PidSimFrontEnd::~PidSimFrontEnd()
   }
 
 
-  bool isNewSettings()
+  bool PidSimFrontEnd::isNewSettings()
   {
     bool result = mHardReset;
     mHardReset=false;
     return result;
   }
 
-  bool isSlowTime()
+  bool PidSimFrontEnd::isSlowTime()
   {
     bool result = mSlowTime;
     mSlowTime =false;
@@ -597,21 +596,21 @@ PidSimFrontEnd::~PidSimFrontEnd()
     return mSlowTimeState;
   }
 
-  void setArmAngle( double angle ) {
+  void PidSimFrontEnd::setArmAngle( double angle ) {
     int intAngle = radToDeg(angle);
     mAngleCurrent->setValue( std::to_string( intAngle ));
     mArmAngle = angle;
   }
 
-  double getStartAngle() {
+  double PidSimFrontEnd::getStartAngle() {
     return mStartAngle;
   }
 
-  double getTargetAngle() {
+  double PidSimFrontEnd::getTargetAngle() {
     return mTargetAngle;
   }
 
-  void resetErrorRecord()
+  void PidSimFrontEnd::resetErrorRecord()
   {
     mPError.clear();
     mIError.clear();
@@ -625,7 +624,7 @@ PidSimFrontEnd::~PidSimFrontEnd()
     }
   }
 
-  void recordActualError( double pError, double iError, double dError, double motor )
+  void PidSimFrontEnd::recordActualError( double pError, double iError, double dError, double motor )
   {
     //Not the cleverist way to do this, but CPU is cheap.
     size_t samplesToMove = samplesToRecord - 1;
@@ -641,7 +640,7 @@ PidSimFrontEnd::~PidSimFrontEnd()
     mMotor.at( samplesToRecord-1 ) = motor;
   }
 
-  std::pair<int,int> populateGraphIndices( 
+  std::pair<int,int> PidSimFrontEnd::populateGraphIndices( 
     const std::vector<std::optional<double>> toPlot,
     std::pair<int,int> startData,
     double color
@@ -696,57 +695,24 @@ PidSimFrontEnd::~PidSimFrontEnd()
     return std::pair<int,int>( endPos, endIndex );
   }
 
-  int getSamplesPerSecond() { return samplesPerSecond; }
+  int PidSimFrontEnd::getSamplesPerSecond() { 
+    return samplesPerSecond; 
+  }
 
-  double getP() { return mPidP; }
-  double getI() { return mPidI; }
-  double getD() { return mPidD; }
-  double getRollingFriction() { return mRollingFriction; }
-  double getStaticFriction() { return mStaticFriction; }
+  double PidSimFrontEnd::getP() {
+     return mPidP; 
+  }
+  double PidSimFrontEnd::getI() {
+     return mPidI; 
+  }
+  double PidSimFrontEnd::getD() {
+     return mPidD; 
+  }
+  double PidSimFrontEnd::getRollingFriction() {
+     return mRollingFriction; 
+  }
+  double PidSimFrontEnd::getStaticFriction() {
+     return mStaticFriction; 
+  }
 
-private:
-
-  static constexpr int       secondsToDisplay = 5;
-  static constexpr int       samplesPerSecond = 10;
-  static constexpr size_t    samplesToRecord = samplesPerSecond * secondsToDisplay;
-  static constexpr size_t    axisSamples = 30;
-
-  // For each sample, record top, middle, botton for graph
-  static constexpr int numGraphPositions = 
-      3 * (4*samplesToRecord + axisSamples );
-  static constexpr int numGraphIndices   =
-      4 * (4*(samplesToRecord-1)+(axisSamples-1)); 
-
-  std::vector<std::optional<double>> mPError;
-  std::vector<std::optional<double>> mIError;
-  std::vector<std::optional<double>> mDError;
-  std::vector<std::optional<double>> mMotor;
-  std::vector<std::optional<double>> mAxis;
-
-  double              mArmAngle = 0.0;
-  double              mStartAngle;
-  double              mTargetAngle;
-  double              mSensorDelay;
-  double              mPidP;
-  double              mPidI;
-  double              mPidD;
-  double              mStaticFriction;
-  double              mRollingFriction;
-  bool                mReset = false;
-  bool                mHardReset = false;
-  bool                mSlowTime = false;
-  bool                mSlowTimeState = false;
-  Button*             mSlowTimeButton = nullptr;
-  bool                mNudgeDown = false;
-  bool                mNudgeUp = false;
-  bool                mWackDown = false;
-  bool                mWackUp = false;
-  nanogui::GLShader   mShader;
-  nanogui::GLShader   mGrapher;
-  nanogui::TextBox*   mAngleCurrent; 
-
-  nanogui::MatrixXf graphPositions;
-  nanogui::MatrixXu graphIndices;
-};
-#endif
 
