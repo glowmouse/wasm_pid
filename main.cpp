@@ -452,8 +452,8 @@ public:
     Widget *panel = new Widget(window);
     panel->setLayout(new BoxLayout(Orientation::Horizontal,
         Alignment::Middle, 0, 20));
-    auto newSettings = new Button( panel, "Update" );
-    newSettings->setCallback( [&] (void) { mNewSettings = true; }); 
+    auto hardReset = new Button( panel, "Hard Reset" );
+    hardReset->setCallback( [&] (void) { mHardReset = true; }); 
     auto reset = new Button( panel, "Reset" );
     reset->setCallback( [&] (void) { mReset =true; }); 
     mSlowTimeButton = new Button( panel, "Slow Time" );
@@ -680,8 +680,8 @@ public:
 
   bool isNewSettings()
   {
-    bool result = mNewSettings;
-    mNewSettings=false;
+    bool result = mHardReset;
+    mHardReset=false;
     return result;
   }
 
@@ -833,7 +833,7 @@ private:
   double              mStaticFriction;
   double              mRollingFriction;
   bool                mReset = false;
-  bool                mNewSettings = false;
+  bool                mHardReset = false;
   bool                mSlowTime = false;
   bool                mSlowTimeState = false;
   Button*             mSlowTimeButton = nullptr;
