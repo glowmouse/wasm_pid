@@ -16,22 +16,12 @@
 
 std::unique_ptr<PidSimBackEnd> backEndSingleton;
 
-static std::chrono::high_resolution_clock::time_point lastFpsTime;
 static std::chrono::high_resolution_clock::time_point lastTickTime;
-double frameRateSmoothing = 1.0;
-double numFrames = 0;
 
 void mainloop(){
-	std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>> (std::chrono::high_resolution_clock::now() - lastFpsTime);
   std::chrono::high_resolution_clock::time_point timeNow = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> backDelta = std::chrono::duration_cast<std::chrono::duration<double>> (timeNow - lastTickTime );
   lastTickTime = timeNow;
-
-	numFrames++;
-	if (delta.count() > frameRateSmoothing) {
-    numFrames = 0;
-    lastFpsTime = std::chrono::high_resolution_clock::now();
-  }
 
   backEndSingleton->update( backDelta ); 
 	nanogui::mainloop();
