@@ -1,47 +1,10 @@
 #ifndef __PIDSIM_FRONTEND_H__
 #define __PIDSIM_FRONTEND_H__
 
-#include <nanogui/opengl.h>
-#include <nanogui/glutil.h>
-#include <nanogui/screen.h>
-#include <nanogui/window.h>
-#include <nanogui/layout.h>
-#include <nanogui/label.h>
-#include <nanogui/checkbox.h>
-#include <nanogui/button.h>
-#include <nanogui/toolbutton.h>
-#include <nanogui/popupbutton.h>
-#include <nanogui/combobox.h>
-#include <nanogui/progressbar.h>
-#include <nanogui/entypo.h>
-#include <nanogui/messagedialog.h>
-#include <nanogui/textbox.h>
-#include <nanogui/slider.h>
-#include <nanogui/imagepanel.h>
-#include <nanogui/imageview.h>
-#include <nanogui/vscrollpanel.h>
-#include <nanogui/colorwheel.h>
-#include <nanogui/colorpicker.h>
-#include <nanogui/graph.h>
-#include <nanogui/tabwidget.h>
-#include <iostream>
-#include <iomanip>
-#include <string>
-#include <emscripten.h>
-#include "model.h"  // auto generated code.
-#include <memory>
-#include <utility>
-#include <chrono>
-#include <numeric>
-#include "pidsim_utils.h"
-
-using std::cout;
-using std::cerr;
-using std::endl;
-using std::string;
-using std::vector;
-using std::pair;
-using std::to_string;
+#include <nanogui/screen.h>     // for nanogui::Screen
+#include <nanogui/glutil.h>     // for GLShader
+#include <optional>             // for std::optional
+#include <vector>               // for std::vector
 
 constexpr double ShaderRed    = 1.0;
 constexpr double ShaderGreen  = 2.0;
@@ -131,7 +94,7 @@ private:
   bool                mHardReset = false;
   bool                mSlowTime = false;
   bool                mSlowTimeState = false;
-  Button*             mSlowTimeButton = nullptr;
+  nanogui::Button*    mSlowTimeButton = nullptr;
   bool                mNudgeDown = false;
   bool                mNudgeUp = false;
   bool                mWackDown = false;

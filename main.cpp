@@ -43,6 +43,7 @@
 #include <chrono>
 #include <numeric>
 #include "pidsim_frontend.h"
+#include "pidsim_utils.h"
 
 #if defined(__GNUC__)
 #  pragma GCC diagnostic ignored "-Wmissing-field-initializers"

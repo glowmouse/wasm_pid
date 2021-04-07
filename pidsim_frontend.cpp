@@ -1,13 +1,15 @@
 #include "pidsim_frontend.h"
-
-using std::cout;
-using std::cerr;
-using std::endl;
-using std::string;
-using std::vector;
-using std::pair;
-using std::to_string;
-
+#include "nanogui/button.h"
+#include "nanogui/label.h"
+#include "nanogui/layout.h"
+#include "nanogui/slider.h"
+#include "nanogui/textbox.h"
+#include "nanogui/widget.h"
+#include "nanogui/window.h"
+#include "model.h"
+#include "pidsim_utils.h"
+#include <sstream>
+#include <iomanip>
 
 ///
 /// Create a slider with a label
@@ -26,7 +28,7 @@ using std::to_string;
 ///
 /// TODO - the noSlider objects is ugly.  Find a way to refactor?
 /// 
-TextBox* makeSlider( 
+nanogui::TextBox* makeSlider( 
   nanogui::Widget*                    parent,
   const std::string&                  labelText,
   float                               sliderStartPos,
@@ -442,7 +444,6 @@ bool PidSimFrontEnd::keyboardEvent(int key, int scancode, int action, int modifi
     if (Screen::keyboardEvent(key, scancode, action, modifiers))
       return true;
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-		  std::cout<<"Exit(ESC) called"<<std::endl;
       //setVisible(false);
       return true;
     }
