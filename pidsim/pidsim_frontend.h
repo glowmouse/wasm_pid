@@ -65,7 +65,7 @@ public:
 private:
 
   static constexpr int       secondsToDisplay = 5;
-  static constexpr int       samplesPerSecond = 10;
+  static constexpr int       samplesPerSecond = 25;
   static constexpr size_t    samplesToRecord = samplesPerSecond * secondsToDisplay;
   static constexpr size_t    axisSamples = 30;
 

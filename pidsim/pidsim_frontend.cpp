@@ -135,7 +135,7 @@ float specularScale = .5;
 
 // Use lightBlue for ambient & diffuse, white for specilar.
 //
-vec3 objcolor     = vec3(  .5,   .5, 1.0);
+vec3 objcolor     = vec3(  .7,   .7, 1.0);
 vec3 white        = vec3( 1.0, 1.0, 1.0); 
 
 void main() {
