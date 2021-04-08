@@ -412,6 +412,7 @@ PidSimFrontEnd::PidSimFrontEnd() :
 
     Vector3f lightpos;
     lightpos << 10, -40, 50;
+    //lightpos << 5, -15, 50;
     //lightpos << 5, -15, 10;
     // 10, 0, 25
     // TODO, not found in fragment shader unless set here.  Pass through vertex shader?

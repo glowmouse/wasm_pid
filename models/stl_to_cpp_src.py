@@ -128,27 +128,35 @@ class STLModel:
     print("extern MatrixXf %snormals;" % (prefix), file=h_file )
     print("MatrixXf %snormals(3, %d);" % (prefix, self.maxId), file=cpp_file )
 
+    print("static const std::vector<int> %sraw_indices {" % prefix, file=cpp_file)
+    for triangle in self.triangles:
+      print("   %d,%d,%d," % (triangle.v0,triangle.v1,triangle.v2), file=cpp_file)
+
+    print("};", file=cpp_file )
+
+    print("static const std::vector<float> %sraw_positions {" % prefix, file=cpp_file)
+    for vector in self.vectors:
+      print("   %f,%f,%f," % ( vector.x, vector.y, vector.z), file=cpp_file )
+      print("   %f,%f,%f," % ( vector.nx, vector.ny, vector.nz), file=cpp_file )
+    print("  };", file=cpp_file );
+
     print("", file=cpp_file)
     print("void %sinitModel() {" % prefix, file=cpp_file)
     print("", file=h_file)
     print("extern void %sinitModel();" % prefix ,file=h_file)
 
-    index = 0;
-    for triangle in self.triangles:
-      print("   %sindices.col(%d) << %d,%d,%d;" % (prefix, index,triangle.v0,triangle.v1,triangle.v2), file=cpp_file)
-      index+=1
+    print("  for ( int i = 0; i < %d; ++i ) {" % len(self.triangles), file=cpp_file )
 
-    index = 0;
-    for vector in self.vectors:
-      print("   %spositions.col(%d) << %f,%f,%f;" % ( prefix, index, vector.x, vector.y, vector.z), file=cpp_file )
-      index+=1
+    print("  %sindices.col(i) << %sraw_indices.at(i*3+0), %sraw_indices.at(i*3+1), %sraw_indices.at(i*3+2);" % (prefix,prefix,prefix,prefix), file=cpp_file );
+    print("}", file=cpp_file );
+ 
 
-    index = 0;
-    for vector in self.vectors:
-      print("   %snormals.col(%d) << %f,%f,%f;" % ( prefix, index, vector.nx, vector.ny, vector.nz), file=cpp_file  )
-      index+=1
-    print("}\n\n", file=cpp_file )
-  
+    print("  for ( int i = 0; i < %d; ++i ) {" % len(self.vectors), file=cpp_file )
+    print("   %spositions.col(i) << %sraw_positions.at(i*6+0), %sraw_positions.at(i*6+1), %sraw_positions.at(i*6+2);" % ( prefix, prefix, prefix, prefix), file=cpp_file )
+    print("   %snormals.col(i) << %sraw_positions.at(i*6+3), %sraw_positions.at(i*6+4), %sraw_positions.at(i*6+5);" % ( prefix, prefix, prefix, prefix), file=cpp_file )
+    print("  }", file=cpp_file );
+    print("}", file=cpp_file );
+
 
 def readSTLFile( stl_file_name, model, prefix, h_file ):
   stl_file = open( stl_file_name , 'r' )

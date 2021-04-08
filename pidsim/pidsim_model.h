@@ -1,7 +1,7 @@
 #define base_TRIANGLE_START 0
-#define base_TRIANGLE_END 336
-#define arm_TRIANGLE_START 336
-#define arm_TRIANGLE_END 380
+#define base_TRIANGLE_END 4288
+#define arm_TRIANGLE_START 4288
+#define arm_TRIANGLE_END 6152
 #include <nanogui/common.h>
 using namespace nanogui;
 extern MatrixXu indices;
