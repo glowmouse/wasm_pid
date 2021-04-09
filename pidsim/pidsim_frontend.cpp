@@ -355,14 +355,17 @@ PidSimFrontEnd::PidSimFrontEnd() :
     makeSlider( window, "Rolling Friction", .2, 
       [&](float slider ) { return sliderTo10( mRollingFriction, slider );}, 
       "" );
-    makeSlider( window, "Static Friction", 0, 
-      [&](float slider ) { return sliderTo10( mStaticFriction, slider );}, 
-      "" );
+    //makeSlider( window, "Static Friction", 0, 
+    //  [&](float slider ) { return sliderTo10( mStaticFriction, slider );}, 
+    //  "" );
     makeSlider( window, "Max Sensor Noise", 0, 
       [&](float slider ) { return sliderTo2( mSensorNoise, slider );}, 
       "deg" );
     makeSlider( window, "Sensor Delay", 0, 
       [&](float slider ) { return sliderTo200( mSensorDelay, slider );}, 
+      "ms" );
+    makeSlider( window, "Motor Delay", 0, 
+      [&](float slider ) { return sliderTo200( mMotorDelay, slider );}, 
       "ms" );
 
     new Label(window, "Simulation Control", "sans-bold" );
@@ -734,6 +737,9 @@ bool PidSimFrontEnd::keyboardEvent(int key, int scancode, int action, int modifi
   }
   double PidSimFrontEnd::getSensorDelay() const {
      return mSensorDelay; 
+  }
+  double PidSimFrontEnd::getMotorDelay() const {
+     return mMotorDelay; 
   }
 
 

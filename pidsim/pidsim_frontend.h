@@ -62,6 +62,7 @@ public:
   double getStaticFriction() const;
   double getSensorNoise() const;
   double getSensorDelay() const;
+  double getMotorDelay() const;
 
 private:
 
@@ -86,6 +87,7 @@ private:
   double              mStartAngle;
   double              mTargetAngle;
   double              mSensorDelay;
+  double              mMotorDelay;
   double              mPidP;
   double              mPidI;
   double              mPidD;

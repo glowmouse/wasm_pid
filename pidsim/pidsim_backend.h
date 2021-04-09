@@ -4,6 +4,7 @@
 #include "pidsim_frontend.h"
 #include "pidsim_utils.h"
 #include <queue>
+#include <numeric>
 
 class PidSimBackEndState
 {
@@ -13,6 +14,7 @@ class PidSimBackEndState
     mAngle = resetAngle;
     mAngleVel = 0.0;
     mMaxNoiseInRadians = 0.0;
+    setMotorDelay( 0.0 );
   }
 
   void bump( double bumpVel ) {
@@ -34,6 +36,20 @@ class PidSimBackEndState
     mSensorDelayInUpdates = 1+static_cast<int>(sensorDelayInSeconds * 50.0);
   }
 
+  void setMotorDelay( double motorDelayInMs )
+  {
+    const double motorDelayInSeconds = motorDelayInMs / 1000.0;
+    mMotorDelayInUpdates = 1+static_cast<int>(motorDelayInSeconds * 50.0);
+    const double currentMotorAvg = mMotorDelay.size() ?
+      std::accumulate( mMotorDelay.begin(), mMotorDelay.end(), 0.0 ) / ((double) mMotorDelay.size()) :
+      0.0;
+    mMotorDelay.clear();
+    for ( int i = 0; i < mMotorDelayInUpdates; ++i ) {
+      mMotorDelay.push_back( currentMotorAvg );
+    }
+    mMotorDelayIndex = 0;
+  }
+
   void setSensorNoise( double maxNoiseInDegrees ) {
     mMaxNoiseInRadians = degToRad(maxNoiseInDegrees);
   }
@@ -48,9 +64,17 @@ class PidSimBackEndState
     mAngleAccel += armX * -9.8;
   }
 
+  double getActualMotor()
+  {
+      return std::accumulate( mMotorDelay.begin(), mMotorDelay.end(), 0.0 ) / ((double) mMotorDelay.size());
+  }
+
   void applyMotor( double motorPower, double timeSlice )
   {
-    mAngleAccel += motorPower / timeSlice;
+    mMotorDelay.at( mMotorDelayIndex ) = motorPower;
+    mMotorDelayIndex = ( mMotorDelayIndex + 1 ) % mMotorDelayInUpdates;
+
+    mAngleAccel += getActualMotor() / timeSlice;
   }
 
   void applyFriction( double staticFriction, double rollingFriction, double timeSlice )
@@ -124,6 +148,9 @@ class PidSimBackEndState
   double mMaxNoiseInRadians = 0;
   int mSensorDelayInUpdates = 1;
   std::queue<double> mPastAngles;
+  std::vector<double> mMotorDelay;
+  int mMotorDelayInUpdates = 1;
+  int mMotorDelayIndex = 0;
 };
 
 class PidSimBackEnd

@@ -27,6 +27,7 @@ void PidSimBackEnd::softReset()
   mTargetAngle = degToRad(mFrontEnd->getTargetAngle());
   mArmState.setSensorNoise( mFrontEnd->getSensorNoise() );
   mArmState.setSensorDelay( mFrontEnd->getSensorDelay() );
+  mArmState.setMotorDelay( mFrontEnd->getMotorDelay() );
 }
 
 void PidSimBackEnd::reset()
@@ -101,7 +102,7 @@ void PidSimBackEnd::updateOneTick()
 
   ++mCounter1;
   if( (mCounter1 % sampleInterval ) == 0 ) {
-    mFrontEnd->recordActualError( radToDeg(pError), radToDeg( iError ), radToDeg( dError), motor * 150 );
+    mFrontEnd->recordActualError( radToDeg(pError), radToDeg( iError ), radToDeg( dError), mArmState.getActualMotor() * 150 );
   }
   updateFrontEnd();
 }
