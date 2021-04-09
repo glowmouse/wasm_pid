@@ -12,7 +12,7 @@ class PidSimBackEndState
   void reset( double resetAngle ) {
     mAngle = resetAngle;
     mAngleVel = 0.0;
-    mSensorNoiseRangeInRadians = 0.0;
+    mMaxNoiseInRadians = 0.0;
   }
 
   void bump( double bumpVel ) {
@@ -24,24 +24,18 @@ class PidSimBackEndState
   }
 
   void endSimulationIteration() {
-    double noise = static_cast<double>(rand() % 1000) / 1000.0 * mSensorNoiseRangeInRadians;;
+    double noise = static_cast<double>((rand() % 2000)-1000) / 1000.0 * mMaxNoiseInRadians;
     mPastAngles.push(mAngle + noise );
   }
 
-  void setSensorDelay( double sensorDelay )
+  void setSensorDelay( double sensorDelayInMs )
   {
-    // slider value from 0 to 10.
-    // Max sensor delay in seconds will be a 1/10th of a second.
-    // 
-    const double sensorDelayInSeconds = sensorDelay / 10.0 * .1;
+    const double sensorDelayInSeconds = sensorDelayInMs / 1000.0;
     mSensorDelayInUpdates = 1+static_cast<int>(sensorDelayInSeconds * 50.0);
   }
 
-  void setSensorNoise( double noise ) {
-    // Input is from 0 to 10 (from the slider)
-    // Max noise +- 2 degrees seems reasonable for the simulation
-    // which makes a range of 4 degrees.  10/4 = 2.5
-    mSensorNoiseRangeInRadians = degToRad(noise/2.5);
+  void setSensorNoise( double maxNoiseInDegrees ) {
+    mMaxNoiseInRadians = degToRad(maxNoiseInDegrees);
   }
 
   void applyGravity( double timeSlice )
@@ -127,7 +121,7 @@ class PidSimBackEndState
   double mAngle = 0.0;
   double mAngleVel = 0.0;
   double mAngleAccel = 0.0;
-  double mSensorNoiseRangeInRadians = 0;
+  double mMaxNoiseInRadians = 0;
   int mSensorDelayInUpdates = 1;
   std::queue<double> mPastAngles;
 };

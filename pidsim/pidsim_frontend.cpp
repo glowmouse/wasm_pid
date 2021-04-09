@@ -299,7 +299,11 @@ PidSimFrontEnd::PidSimFrontEnd() :
     {
       std::stringstream stream;
       storage = slider * scale;
-      stream << std::fixed << std::setprecision(1) << ( storage );
+      if ( scale < 20 ) {
+        stream << std::fixed << std::setprecision(1) << ( storage );
+      } else {
+        stream << std::fixed << std::setprecision(0) << ( storage );
+      }
       return stream.str();
     };
     auto sliderToInt = []( double& storage, float slider, int scale, int offset=0 )
@@ -314,6 +318,14 @@ PidSimFrontEnd::PidSimFrontEnd() :
     auto sliderTo10 = [sliderToFloat]( double& storage, float slider ) 
     {
       return sliderToFloat( storage, slider, 10.0 );
+    };
+    auto sliderTo200 = [sliderToFloat]( double& storage, float slider ) 
+    {
+      return sliderToFloat( storage, slider, 200 );
+    };
+    auto sliderTo2 = [sliderToFloat]( double& storage, float slider ) 
+    {
+      return sliderToFloat( storage, slider, 2 );
     };
     auto sliderToPid = [sliderToFloat]( double& storage, float slider ) {
       return sliderToFloat( storage, slider, 11.0 );
@@ -346,12 +358,12 @@ PidSimFrontEnd::PidSimFrontEnd() :
     makeSlider( window, "Static Friction", 0, 
       [&](float slider ) { return sliderTo10( mStaticFriction, slider );}, 
       "" );
-    makeSlider( window, "Sensor Noise", 0, 
-      [&](float slider ) { return sliderTo10( mSensorNoise, slider );}, 
-      "" );
+    makeSlider( window, "Max Sensor Noise", 0, 
+      [&](float slider ) { return sliderTo2( mSensorNoise, slider );}, 
+      "deg" );
     makeSlider( window, "Sensor Delay", 0, 
-      [&](float slider ) { return sliderTo10( mSensorDelay, slider );}, 
-      "" );
+      [&](float slider ) { return sliderTo200( mSensorDelay, slider );}, 
+      "ms" );
 
     new Label(window, "Simulation Control", "sans-bold" );
 
