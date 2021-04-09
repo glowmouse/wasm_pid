@@ -54,13 +54,14 @@ public:
     double color
   );
 
-  int getSamplesPerSecond();
-
-  double getP();
-  double getI();
-  double getD();
-  double getRollingFriction();
-  double getStaticFriction();
+  int getSamplesPerSecond() const;
+  double getP() const;
+  double getI() const;
+  double getD() const;
+  double getRollingFriction() const;
+  double getStaticFriction() const;
+  double getSensorNoise() const;
+  double getSensorDelay() const;
 
 private:
 
@@ -90,6 +91,7 @@ private:
   double              mPidD;
   double              mStaticFriction;
   double              mRollingFriction;
+  double              mSensorNoise;
   bool                mReset = false;
   bool                mHardReset = false;
   bool                mSlowTime = false;

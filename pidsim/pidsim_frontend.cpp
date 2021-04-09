@@ -150,7 +150,7 @@ void main() {
   //
   vec3 viewdir    = normalize( viewpos - FragPos );
   vec3 reflectdir = reflect( -lightdir, FragNormal);
-  float spec      = pow(max(dot(viewdir, reflectdir), 0.0), 32.0 );
+  float spec      = pow(max(dot(viewdir, reflectdir), 0.0), 5.0 );
 
   //
   // Combine into a single RGB value
@@ -316,10 +316,10 @@ PidSimFrontEnd::PidSimFrontEnd() :
       return sliderToFloat( storage, slider, 10.0 );
     };
     auto sliderToPid = [sliderToFloat]( double& storage, float slider ) {
-      return sliderToFloat( storage, slider, 4.0 );
+      return sliderToFloat( storage, slider, 11.0 );
     };
 
-    new Label(window, "Arm Start Position", "sans-bold");
+    new Label(window, "Arm Position", "sans-bold");
     makeSlider( window, "Start Arm Angle", 0.0, 
       [&](float slider) { return sliderToDegrees( mStartAngle, slider ); } ,
       "deg" );
@@ -328,8 +328,7 @@ PidSimFrontEnd::PidSimFrontEnd() :
       [&](float slider) { return sliderToDegrees( mTargetAngle, slider ); }, 
       "deg" );
 
-    new Label(window, "Arm Current Position", "sans-bold");
-    mAngleCurrent = makeSlider( window, "Arm Angle", 0.0, 
+    mAngleCurrent = makeSlider( window, "Current Arm Angle", 0.0, 
       [&](float slider) { return ""; }, "deg", true );
 
     new Label(window, "PID Settings", "sans-bold");
@@ -346,6 +345,12 @@ PidSimFrontEnd::PidSimFrontEnd() :
       "" );
     makeSlider( window, "Static Friction", 0, 
       [&](float slider ) { return sliderTo10( mStaticFriction, slider );}, 
+      "" );
+    makeSlider( window, "Sensor Noise", 0, 
+      [&](float slider ) { return sliderTo10( mSensorNoise, slider );}, 
+      "" );
+    makeSlider( window, "Sensor Delay", 0, 
+      [&](float slider ) { return sliderTo10( mSensorDelay, slider );}, 
       "" );
 
     new Label(window, "Simulation Control", "sans-bold" );
@@ -404,14 +409,9 @@ PidSimFrontEnd::PidSimFrontEnd() :
     mShader.init( "shader", vertexShader, fragmentShader ); 
     mGrapher.init( "grapher", vertexShaderGrapher, fragmentShaderGrapher ); 
 
-    Matrix4f light;
-    light.col(0) <<  0.5,  0.5, 0.5, 0.0;
-    light.col(1) <<  -0.5,  -0.5, -0.5, 0.0;
-    light.col(2) <<  .5,  .5, .5, 0.0;
-    light.col(3) <<  0.0,  0.0, 0.0, 1.0;
-
     Vector3f lightpos;
-    lightpos << 10, -40, 50;
+    lightpos << -10, -40, 50;
+    lightpos << -15, -40,  5;
     //lightpos << 5, -15, 50;
     //lightpos << 5, -15, 10;
     // 10, 0, 25
@@ -697,24 +697,30 @@ bool PidSimFrontEnd::keyboardEvent(int key, int scancode, int action, int modifi
     return std::pair<int,int>( endPos, endIndex );
   }
 
-  int PidSimFrontEnd::getSamplesPerSecond() { 
+  int PidSimFrontEnd::getSamplesPerSecond()  const { 
     return samplesPerSecond; 
   }
 
-  double PidSimFrontEnd::getP() {
+  double PidSimFrontEnd::getP() const {
      return mPidP; 
   }
-  double PidSimFrontEnd::getI() {
+  double PidSimFrontEnd::getI() const {
      return mPidI; 
   }
-  double PidSimFrontEnd::getD() {
+  double PidSimFrontEnd::getD() const {
      return mPidD; 
   }
-  double PidSimFrontEnd::getRollingFriction() {
+  double PidSimFrontEnd::getRollingFriction() const {
      return mRollingFriction; 
   }
-  double PidSimFrontEnd::getStaticFriction() {
+  double PidSimFrontEnd::getStaticFriction() const {
      return mStaticFriction; 
+  }
+  double PidSimFrontEnd::getSensorNoise() const {
+     return mSensorNoise; 
+  }
+  double PidSimFrontEnd::getSensorDelay() const {
+     return mSensorDelay; 
   }
 
 

@@ -11,14 +11,25 @@ class PidSimBackEndState
   void reset( double resetAngle ) {
     mAngle = resetAngle;
     mAngleVel = 0.0;
+    mSensorNoiseRangeInRadians = 0.0;
+    mCurrentSensorError = 0.0;
   }
 
   void bump( double bumpVel ) {
     mAngleVel += bumpVel;
   }
 
-  void resetAngAccel () {
+  void startNewSimulationIteration() {
     mAngleAccel = 0.0;
+    double noise = static_cast<double>(rand() % 1000) / 1000.0 * mSensorNoiseRangeInRadians;;
+    mCurrentSensorError = noise - (mSensorNoiseRangeInRadians/2);
+  }
+
+  void setSensorNoise( double noise ) {
+    // Input is from 0 to 10 (from the slider)
+    // Max noise +- 2 degrees seems reasonable for the simulation
+    // which makes a range of 4 degrees.  10/4 = 2.5
+    mSensorNoiseRangeInRadians = degToRad(noise/2.5);
   }
 
   void applyGravity( double timeSlice )
@@ -81,6 +92,11 @@ class PidSimBackEndState
     }
   }
 
+  double getSensorAngle() 
+  {
+    return mAngle + mCurrentSensorError;
+  }
+
   double getAngle() 
   {
     return mAngle;
@@ -92,6 +108,8 @@ class PidSimBackEndState
   double mAngle = 0.0;
   double mAngleVel = 0.0;
   double mAngleAccel = 0.0;
+  double mCurrentSensorError = 0;
+  double mSensorNoiseRangeInRadians = 0;
 };
 
 class PidSimBackEnd

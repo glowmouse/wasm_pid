@@ -25,6 +25,7 @@ void PidSimBackEnd::softReset()
   mRollingFriction = mFrontEnd->getRollingFriction()/50.0;
   mStaticFriction= mFrontEnd->getStaticFriction();
   mTargetAngle = degToRad(mFrontEnd->getTargetAngle());
+  mArmState.setSensorNoise( mFrontEnd->getSensorNoise() );
 }
 
 void PidSimBackEnd::reset()
@@ -75,7 +76,7 @@ void PidSimBackEnd::updateOneTick()
 
   int sampleInterval = updatesPerSecond / mFrontEnd->getSamplesPerSecond();
 
-  double pError = mArmState.getAngle() - mTargetAngle;
+  double pError = mArmState.getSensorAngle() - mTargetAngle;
   mIError += pError;
   double iError = mIError * timeSlice; 
   double dError = (pError - mLastPError) / timeSlice / 5.0;
@@ -88,7 +89,7 @@ void PidSimBackEnd::updateOneTick()
   double allTerms = pTerm + iTerm + dTerm;
   double motor = std::max(-4.0, std::min( -allTerms, 4.0 )) / 5.0;
 
-  mArmState.resetAngAccel();
+  mArmState.startNewSimulationIteration();
   mArmState.applyGravity( timeSlice );
   mArmState.applyMotor( motor, timeSlice );
   mArmState.updateAngleVel( timeSlice );
