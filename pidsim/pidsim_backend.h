@@ -3,6 +3,7 @@
 
 #include "pidsim_frontend.h"
 #include "pidsim_utils.h"
+#include <queue>
 
 class PidSimBackEndState
 {
@@ -12,17 +13,28 @@ class PidSimBackEndState
     mAngle = resetAngle;
     mAngleVel = 0.0;
     mSensorNoiseRangeInRadians = 0.0;
-    mCurrentSensorError = 0.0;
   }
 
   void bump( double bumpVel ) {
     mAngleVel += bumpVel;
   }
 
-  void startNewSimulationIteration() {
+  void startSimulationIteration() {
     mAngleAccel = 0.0;
+  }
+
+  void endSimulationIteration() {
     double noise = static_cast<double>(rand() % 1000) / 1000.0 * mSensorNoiseRangeInRadians;;
-    mCurrentSensorError = noise - (mSensorNoiseRangeInRadians/2);
+    mPastAngles.push(mAngle + noise );
+  }
+
+  void setSensorDelay( double sensorDelay )
+  {
+    // slider value from 0 to 10.
+    // Max sensor delay in seconds will be a 1/10th of a second.
+    // 
+    const double sensorDelayInSeconds = sensorDelay / 10.0 * .1;
+    mSensorDelayInUpdates = 1+static_cast<int>(sensorDelayInSeconds * 50.0);
   }
 
   void setSensorNoise( double noise ) {
@@ -94,7 +106,14 @@ class PidSimBackEndState
 
   double getSensorAngle() 
   {
-    return mAngle + mCurrentSensorError;
+    while ( mSensorDelayInUpdates < mPastAngles.size() )
+    {
+      mPastAngles.pop();
+    }
+    if ( 0 == mPastAngles.size() ) {
+      return 0.0;
+    }
+    return mPastAngles.front();
   }
 
   double getAngle() 
@@ -108,8 +127,9 @@ class PidSimBackEndState
   double mAngle = 0.0;
   double mAngleVel = 0.0;
   double mAngleAccel = 0.0;
-  double mCurrentSensorError = 0;
   double mSensorNoiseRangeInRadians = 0;
+  int mSensorDelayInUpdates = 1;
+  std::queue<double> mPastAngles;
 };
 
 class PidSimBackEnd
