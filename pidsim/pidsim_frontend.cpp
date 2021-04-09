@@ -369,9 +369,10 @@ PidSimFrontEnd::PidSimFrontEnd() :
 
     Widget *panel = new Widget(window);
     panel->setLayout(new BoxLayout(Orientation::Horizontal,
-        Alignment::Middle, 0, 20));
-    auto hardReset = new Button( panel, "Hard Reset" );
-    hardReset->setCallback( [&] (void) { mHardReset = true; }); 
+        Alignment::Middle, 0, 20)); 
+    // kind of doesn't do anything right now.
+    //auto hardReset = new Button( panel, "Hard Reset" );
+    //hardReset->setCallback( [&] (void) { mHardReset = true; }); 
     auto reset = new Button( panel, "Reset" );
     reset->setCallback( [&] (void) { mReset =true; }); 
     mSlowTimeButton = new Button( panel, "Slow Time 10x" );
