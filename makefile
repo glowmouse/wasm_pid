@@ -11,7 +11,7 @@
 CC=em++
 
 NANOFLAGS=-DNANOGUI_LINUX -DNANOVG_GLES3_IMPLEMENTATION
-GLFLAGS=-DGLFW_INCLUDE_ES3 -DGLFW_INCLUDE_GLEXT -s USE_GLFW=3 -s FULL_ES3=1 -s USE_WEBGL2=1 -s ASSERTIONS=1 --shell-file ${EMSDK}/upstream/emscripten/src/shell_minimal.html
+GLFLAGS=-DGLFW_INCLUDE_ES3 -DGLFW_INCLUDE_GLEXT -s USE_GLFW=3 -s FULL_ES3=1 -s USE_WEBGL2=1 -s ASSERTIONS=1 --shell-file pidsim/shell_minimal.html
 EMFLAGS=--std=c++17 -O -s WASM=1
 INCFLAGS=-Iinclude/ -Iext/nanovg/ -Iext/eigen/
 LDFLAGS=-lGL -lm -lGLEW
