@@ -374,7 +374,7 @@ PidSimFrontEnd::PidSimFrontEnd() :
     hardReset->setCallback( [&] (void) { mHardReset = true; }); 
     auto reset = new Button( panel, "Reset" );
     reset->setCallback( [&] (void) { mReset =true; }); 
-    mSlowTimeButton = new Button( panel, "Slow Time" );
+    mSlowTimeButton = new Button( panel, "Slow Time 10x" );
     mSlowTimeButton->setCallback( [&] (void) { mSlowTime =true; }); 
 
     Widget *panel2 = new Widget(window);
@@ -605,7 +605,7 @@ bool PidSimFrontEnd::keyboardEvent(int key, int scancode, int action, int modifi
 
     if ( result ) {
       mSlowTimeState = !mSlowTimeState;
-      mSlowTimeButton->setCaption( mSlowTimeState ? "Speed Time" : "Slow Time" );
+      mSlowTimeButton->setCaption( mSlowTimeState ? "Speed Time 10x" : "Slow Time 10x" );
     }
     return mSlowTimeState;
   }
