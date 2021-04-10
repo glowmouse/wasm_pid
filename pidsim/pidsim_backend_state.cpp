@@ -4,15 +4,9 @@
 #include "pidsim_backend_state.h"
 
 
-PidSimBackEndState::PidSimBackEndState( double startAngle ) 
+PidSimBackEndState::PidSimBackEndState( double startAngle )
+  : mAngle{ startAngle } 
 {
-  reset( startAngle );
-}
-
-void PidSimBackEndState::reset( double resetAngle ) {
-  mAngle = resetAngle;
-  mAngleVel = 0.0;
-  mMaxNoiseInRadians = 0.0;
   setMotorDelay( 0.0 );
 }
 

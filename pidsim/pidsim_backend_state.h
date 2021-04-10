@@ -15,7 +15,6 @@ class PidSimBackEndState
   PidSimBackEndState( const PidSimBackEndState& other ) = delete;
   PidSimBackEndState& operator=( const PidSimBackEndState& other ) = delete;
 
-  void reset( double resetAngle );
   void bump( double bumpVel );
   void startSimulationIteration();
   void endSimulationIteration();
@@ -38,7 +37,7 @@ class PidSimBackEndState
   double mAngle = 0.0;
   double mAngleVel = 0.0;
   double mAngleAccel = 0.0;
-  double mMaxNoiseInRadians = 0;
+  double mMaxNoiseInRadians = 0.0;
   int mSensorDelayInUpdates = 1;
   std::queue<double> mPastAngles;
   std::vector<double> mMotorDelay;

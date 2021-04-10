@@ -35,7 +35,8 @@ void PidSimBackEnd::softReset()
 
 void PidSimBackEnd::reset()
 {
-  mArmState->reset( degToRad(mFrontEnd->getStartAngle() ));
+  mArmState = std::make_unique< PidSimBackEndState >( 
+    degToRad(mFrontEnd->getStartAngle() ));
   mFrontEnd->resetErrorRecord();
   mIError = 0;
   softReset();
