@@ -27,8 +27,20 @@ void BackEnd::update( std::chrono::duration<double> delta )
   }
 } 
  
-void BackEnd::softReset()
+void BackEnd::reset()
 {
+  mArmState = std::make_unique< BackEndState >( 
+    Utils::degToRad(mFrontEnd->getStartAngle() ));
+  mFrontEnd->resetErrorRecord();
+  mIError = 0;
+}
+
+void BackEnd::getInputFromFrontEnd()
+{
+  if ( mFrontEnd->isReset() ) {
+    reset();
+  }
+
   mPidP = mFrontEnd->getP();
   mPidI = mFrontEnd->getI();
   mPidD = mFrontEnd->getD();
@@ -37,30 +49,13 @@ void BackEnd::softReset()
   mArmState->setSensorNoise( mFrontEnd->getSensorNoise() );
   mArmState->setSensorDelay( mFrontEnd->getSensorDelay() );
   mArmState->setMotorDelay( mFrontEnd->getMotorDelay() );
-}
-
-void BackEnd::reset()
-{
-  mArmState = std::make_unique< BackEndState >( 
-    Utils::degToRad(mFrontEnd->getStartAngle() ));
-  mFrontEnd->resetErrorRecord();
-  mIError = 0;
-  softReset();
-}
-
-void BackEnd::updateOneTick()
-{
-  if ( mFrontEnd->isReset() ) {
-    reset();
-  }
-  softReset();
+  mSlowTime = mFrontEnd->isSlowTime();
 
   if ( mLastPidI != mPidI ) {
     mIError = 0;
     mLastPidI = mPidI;
   }
 
-  mSlowTime = mFrontEnd->isSlowTime();
   if ( mFrontEnd->isNudgeUp()) {
     mArmState->bump( 3 );
   }
@@ -73,6 +68,11 @@ void BackEnd::updateOneTick()
   if ( mFrontEnd->isWackDown()) {
     mArmState->bump( -10 );
   }
+}
+
+void BackEnd::updateOneTick()
+{
+  getInputFromFrontEnd();
 
   ++mCounter0;
   if ( mSlowTime ) {
@@ -82,10 +82,15 @@ void BackEnd::updateOneTick()
   }
 
   // Run simulation about 50x a second.
-  double timeSlice = 1.0/((double) updatesPerSecond);
+  const double timeSlice = 1.0/((double) updatesPerSecond);
+  const double motorPower = updatePidController( timeSlice );
+  updateRobotArmSimulation( timeSlice, motorPower  );
+  updateFrontEnd();
+}
 
-  // Compute and record the error.
 
+double BackEnd::updatePidController( double timeSlice )
+{
   const double pError = mArmState->getSensorAngle() - mTargetAngle;
   mIError += pError;
   const double iError = mIError * timeSlice; 
@@ -99,9 +104,7 @@ void BackEnd::updateOneTick()
   const double allTerms = pTerm + iTerm + dTerm;
   const double motorPower = std::max(-4.0, std::min( -allTerms, 4.0 )) / 5.0;
   sendErrorToFrontEnd( pError, iError, dError );
-
-  updateRobotArmSimulation( timeSlice, motorPower  );
-  updateFrontEnd();
+  return motorPower;
 }
 
 void BackEnd::updateRobotArmSimulation( double timeSlice, double motorPower )

@@ -22,12 +22,13 @@ class BackEnd
 
   private:
 
-  void softReset();
   void reset();
   void updateOneTick();
   void updateFrontEnd();
   void sendErrorToFrontEnd( double pError, double dError, double iError );
   void updateRobotArmSimulation( double timeSlice, double motorPower );
+  void getInputFromFrontEnd();
+  double updatePidController( double timeSlice );
 
   static constexpr int updatesPerSecond = 50;
 
