@@ -7,6 +7,25 @@ namespace PidSim {
 
 class BackEndState;
 
+class PidController
+{
+  public:
+
+  void updatePidSettings(double PidP, double PidI, double PidD, double TargetAngle );
+
+  std::tuple< double, double, double, double> 
+  updatePidController( double timeSlice, double sensorInputAngle );
+  void reset();
+
+  private:
+  double mPidP = 0;
+  double mPidI = 0;
+  double mPidD = 0;
+  double mIError = 0;
+  double mLastPError = 0;
+  double mTargetAngle = 0;
+};
+
 class BackEnd
 {
   public:
@@ -25,10 +44,9 @@ class BackEnd
   void reset();
   void updateOneTick();
   void updateFrontEnd();
-  void sendErrorToFrontEnd( double pError, double dError, double iError );
   void updateRobotArmSimulation( double timeSlice, double motorPower );
   void getInputFromFrontEnd();
-  double updatePidController( double timeSlice );
+  void sendErrorToFrontEnd( double pError, double iError, double dError );
 
   static constexpr int updatesPerSecond = 50;
   static constexpr unsigned int slowTimeScale    = 10;
@@ -36,21 +54,15 @@ class BackEnd
   double time = 0.0f;
   // map mAngle to "screen space" with <x,y> = <cos(mAngle),sin(mAngle)>
 
-  double mPidP = 0;
-  double mPidI = 0;
-  double mLastPidI = 0;
-  double mPidD = 0;
   double mRollingFriction = 0;
-  double mIError = 0;
-  double mLastPError = 0;
-  double mTargetAngle = 0;
 
   bool mSlowTime = false;
   unsigned int mCounter0=0;
   unsigned int mCounter1=0;
 
-  nanogui::ref<FrontEnd> mFrontEnd;
-  std::unique_ptr<BackEndState> mArmState;
+  PidController                   mPidController;
+  nanogui::ref<FrontEnd>          mFrontEnd;
+  std::unique_ptr<BackEndState>   mArmState;
 };
 
 }

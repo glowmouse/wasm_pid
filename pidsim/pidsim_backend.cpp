@@ -32,7 +32,7 @@ void BackEnd::reset()
   mArmState = std::make_unique< BackEndState >( 
     Utils::degToRad(mFrontEnd->getStartAngle() ));
   mFrontEnd->resetErrorRecord();
-  mIError = 0;
+  mPidController.reset();
 }
 
 void BackEnd::getInputFromFrontEnd()
@@ -41,20 +41,18 @@ void BackEnd::getInputFromFrontEnd()
     reset();
   }
 
-  mPidP = mFrontEnd->getP();
-  mPidI = mFrontEnd->getI();
-  mPidD = mFrontEnd->getD();
+  mPidController.updatePidSettings(
+      mFrontEnd->getP(),
+      mFrontEnd->getI(),
+      mFrontEnd->getD(),
+      Utils::degToRad(mFrontEnd->getTargetAngle())
+  );
+
   mRollingFriction = mFrontEnd->getRollingFriction()/50.0;
-  mTargetAngle = Utils::degToRad(mFrontEnd->getTargetAngle());
   mArmState->setSensorNoise( mFrontEnd->getSensorNoise() );
   mArmState->setSensorDelay( mFrontEnd->getSensorDelay() );
   mArmState->setMotorDelay( mFrontEnd->getMotorDelay() );
   mSlowTime = mFrontEnd->isSlowTime();
-
-  if ( mLastPidI != mPidI ) {
-    mIError = 0;
-    mLastPidI = mPidI;
-  }
 
   if ( mFrontEnd->isNudgeUp()) {
     mArmState->bump( 3 );
@@ -83,32 +81,17 @@ void BackEnd::updateOneTick()
   const double timeSlice = 1.0/((double) updatesPerSecond);
 
   // Run the PID controller
-  const double motorPower = updatePidController( timeSlice );
+  const auto[ pError, iError, dError, motorPower ] = 
+    mPidController.updatePidController( timeSlice, mArmState->getSensorAngle()  );
+
+  // Update the error graph
+  sendErrorToFrontEnd( pError, iError, dError );
 
   // Advance the robot arm simulation
   updateRobotArmSimulation( timeSlice, motorPower );
 
   // Send new positions to the front end.
   updateFrontEnd();
-}
-
-
-double BackEnd::updatePidController( double timeSlice )
-{
-  const double pError = mArmState->getSensorAngle() - mTargetAngle;
-  mIError += pError;
-  const double iError = mIError * timeSlice; 
-  const double dError = (pError - mLastPError) / timeSlice / 5.0;
-  mLastPError = pError;
-
-  const double pTerm = pError * mPidP;
-  const double iTerm = iError * mPidI;
-  const double dTerm = dError * mPidD;
-
-  const double allTerms = pTerm + iTerm + dTerm;
-  const double motorPower = std::max(-4.0, std::min( -allTerms, 4.0 )) / 5.0;
-  sendErrorToFrontEnd( pError, iError, dError );
-  return motorPower;
 }
 
 void BackEnd::updateRobotArmSimulation( double timeSlice, double motorPower )
@@ -123,7 +106,7 @@ void BackEnd::updateRobotArmSimulation( double timeSlice, double motorPower )
   mArmState->endSimulationIteration();
 }
 
-void BackEnd::sendErrorToFrontEnd( double pError, double dError, double iError )
+void BackEnd::sendErrorToFrontEnd( double pError, double iError, double dError )
 {
   const int sampleInterval = updatesPerSecond / mFrontEnd->getSamplesPerSecond();
 
@@ -140,6 +123,44 @@ void BackEnd::sendErrorToFrontEnd( double pError, double dError, double iError )
 void BackEnd::updateFrontEnd()
 {
   mFrontEnd->setArmAngle( mArmState->getActualAngle() );
+}
+
+void PidController::updatePidSettings(
+    double pidP,
+    double pidI,
+    double pidD,
+    double targetAngle )
+{
+  mPidP = pidP;
+  if ( pidI != mPidI ) {
+    mPidI = pidI;
+    mIError = 0;
+  }
+  mPidD = pidD;
+  mTargetAngle = targetAngle;
+}
+
+std::tuple< double, double, double, double >
+PidController::updatePidController( double timeSlice, double sensorInputAngle )
+{
+  const double pError = sensorInputAngle - mTargetAngle;
+  mIError += pError;
+  const double iError = mIError * timeSlice; 
+  const double dError = (pError - mLastPError) / timeSlice / 5.0;
+  mLastPError = pError;
+
+  const double pTerm = pError * mPidP;
+  const double iTerm = iError * mPidI;
+  const double dTerm = dError * mPidD;
+
+  const double allTerms = pTerm + iTerm + dTerm;
+  const double motorPower = std::max(-4.0, std::min( -allTerms, 4.0 )) / 5.0;
+  return std::tuple< double, double, double, double >(pError, iError, dError, motorPower );
+}
+
+void PidController::reset()
+{
+  mIError = 0;
 }
 
 
