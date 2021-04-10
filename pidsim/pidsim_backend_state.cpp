@@ -5,9 +5,9 @@
 
 
 PidSimBackEndState::PidSimBackEndState( double startAngle )
-  : mAngle{ startAngle } 
+  : mAngle{ startAngle },
+    mMotorDelay{ 1, 0.0 }
 {
-  setMotorDelay( 0.0 );
 }
 
 void PidSimBackEndState::bump( double bumpVel ) {
@@ -29,20 +29,6 @@ void PidSimBackEndState::setSensorDelay( double sensorDelayInMs )
   mSensorDelayInUpdates = 1+static_cast<int>(sensorDelayInSeconds * 50.0);
 }
 
-void PidSimBackEndState::setMotorDelay( double motorDelayInMs )
-{
-  const double motorDelayInSeconds = motorDelayInMs / 1000.0;
-  mMotorDelayInUpdates = 1+static_cast<int>(motorDelayInSeconds * 50.0);
-  const double currentMotorAvg = mMotorDelay.size() ?
-    std::accumulate( mMotorDelay.begin(), mMotorDelay.end(), 0.0 ) / ((double) mMotorDelay.size()) :
-    0.0;
-  mMotorDelay.clear();
-  for ( int i = 0; i < mMotorDelayInUpdates; ++i ) {
-    mMotorDelay.push_back( currentMotorAvg );
-  }
-  mMotorDelayIndex = 0;
-}
-
 void PidSimBackEndState::setSensorNoise( double maxNoiseInDegrees ) {
   mMaxNoiseInRadians = degToRad(maxNoiseInDegrees);
 }
@@ -57,16 +43,24 @@ void PidSimBackEndState::applyGravity( double timeSlice )
   mAngleAccel += armX * -9.8;
 }
 
+void PidSimBackEndState::setMotorDelay( double MotorDelayMS )
+{
+  using size_type = decltype(mMotorDelay)::size_type;
+  size_type newNumDelays = 1+static_cast<size_type>(MotorDelayMS / 1000.0 * 50.0);
+  if ( newNumDelays != mMotorDelay.size() ) {
+    const double currentAverage = mMotorDelay.getAverage();
+    mMotorDelay = PidSim::Util::MovingAverage<double>( newNumDelays, currentAverage );
+  }
+}
+
 double PidSimBackEndState::getActualMotor()
 {
-  return std::accumulate( mMotorDelay.begin(), mMotorDelay.end(), 0.0 ) / ((double) mMotorDelay.size());
+  return mMotorDelay.getAverage();
 }
 
 void PidSimBackEndState::applyMotor( double motorPower, double timeSlice )
 {
-  mMotorDelay.at( mMotorDelayIndex ) = motorPower;
-  mMotorDelayIndex = ( mMotorDelayIndex + 1 ) % mMotorDelayInUpdates;
-
+  mMotorDelay.newValue( motorPower );
   mAngleAccel += getActualMotor() / timeSlice;
 }
 
