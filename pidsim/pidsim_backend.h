@@ -31,13 +31,14 @@ class BackEnd
   public:
 
   BackEnd( nanogui::ref<FrontEnd> frontEnd );
+  ~BackEnd();
+
+  // Remove operations people shouldn't be using.
   BackEnd() = delete;
   BackEnd( const BackEnd& other ) = delete;
   BackEnd& operator=( BackEnd& other ) = delete;
-  ~BackEnd();
 
   void update( std::chrono::duration<double> delta );
- 
 
   private:
 
@@ -48,17 +49,15 @@ class BackEnd
   void getInputFromFrontEnd();
   void sendErrorToFrontEnd( double pError, double iError, double dError );
 
-  static constexpr int updatesPerSecond = 50;
-  static constexpr unsigned int slowTimeScale    = 10;
+  static constexpr int            updatesPerSecond = 50;
+  static constexpr unsigned int   slowTimeScale    = 10;
 
-  double time = 0.0f;
-  // map mAngle to "screen space" with <x,y> = <cos(mAngle),sin(mAngle)>
+  double                          time              = 0.0f;
+  double                          mRollingFriction  = 0;
+  bool                            mSlowTime         = false;
 
-  double mRollingFriction = 0;
-
-  bool mSlowTime = false;
-  unsigned int mCounter0=0;
-  unsigned int mCounter1=0;
+  unsigned int                    mCounter0         =0;
+  unsigned int                    mCounter1         =0;
 
   PidController                   mPidController;
   nanogui::ref<FrontEnd>          mFrontEnd;
