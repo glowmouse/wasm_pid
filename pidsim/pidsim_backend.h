@@ -23,8 +23,6 @@ class PidSimBackEnd
 
   static constexpr int updatesPerSecond = 50;
 
-  PidSimBackEndState mArmState;
-
   double time = 0.0f;
   // map mAngle to "screen space" with <x,y> = <cos(mAngle),sin(mAngle)>
 
@@ -43,6 +41,7 @@ class PidSimBackEnd
   unsigned int mCounter1=0;
 
   nanogui::ref<PidSimFrontEnd> mFrontEnd;
+  std::unique_ptr<PidSimBackEndState> mArmState;
 };
 
 #endif

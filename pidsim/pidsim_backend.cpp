@@ -1,7 +1,9 @@
 #include "pidsim_backend.h"
 #include "pidsim_utils.h"
 
-PidSimBackEnd::PidSimBackEnd( nanogui::ref<PidSimFrontEnd> frontEnd ) : mFrontEnd{ frontEnd }
+PidSimBackEnd::PidSimBackEnd( nanogui::ref<PidSimFrontEnd> frontEnd ) : 
+  mFrontEnd{ frontEnd },
+  mArmState{ std::make_unique<PidSimBackEndState>() }
 {
   reset();
 }
@@ -26,14 +28,14 @@ void PidSimBackEnd::softReset()
   mRollingFriction = mFrontEnd->getRollingFriction()/50.0;
   mStaticFriction= mFrontEnd->getStaticFriction();
   mTargetAngle = degToRad(mFrontEnd->getTargetAngle());
-  mArmState.setSensorNoise( mFrontEnd->getSensorNoise() );
-  mArmState.setSensorDelay( mFrontEnd->getSensorDelay() );
-  mArmState.setMotorDelay( mFrontEnd->getMotorDelay() );
+  mArmState->setSensorNoise( mFrontEnd->getSensorNoise() );
+  mArmState->setSensorDelay( mFrontEnd->getSensorDelay() );
+  mArmState->setMotorDelay( mFrontEnd->getMotorDelay() );
 }
 
 void PidSimBackEnd::reset()
 {
-  mArmState.reset( degToRad(mFrontEnd->getStartAngle() ));
+  mArmState->reset( degToRad(mFrontEnd->getStartAngle() ));
   mFrontEnd->resetErrorRecord();
   mIError = 0;
   softReset();
@@ -53,16 +55,16 @@ void PidSimBackEnd::updateOneTick()
 
   mSlowTime = mFrontEnd->isSlowTime();
   if ( mFrontEnd->isNudgeUp()) {
-    mArmState.bump( 3 );
+    mArmState->bump( 3 );
   }
   if ( mFrontEnd->isNudgeDown()) {
-    mArmState.bump( -3 );
+    mArmState->bump( -3 );
   }
   if ( mFrontEnd->isWackUp()) {
-    mArmState.bump( 10 );
+    mArmState->bump( 10 );
   }
   if ( mFrontEnd->isWackDown()) {
-    mArmState.bump( -10 );
+    mArmState->bump( -10 );
   }
 
   ++mCounter0;
@@ -79,7 +81,7 @@ void PidSimBackEnd::updateOneTick()
 
   int sampleInterval = updatesPerSecond / mFrontEnd->getSamplesPerSecond();
 
-  double pError = mArmState.getSensorAngle() - mTargetAngle;
+  double pError = mArmState->getSensorAngle() - mTargetAngle;
   mIError += pError;
   double iError = mIError * timeSlice; 
   double dError = (pError - mLastPError) / timeSlice / 5.0;
@@ -92,25 +94,25 @@ void PidSimBackEnd::updateOneTick()
   double allTerms = pTerm + iTerm + dTerm;
   double motor = std::max(-4.0, std::min( -allTerms, 4.0 )) / 5.0;
 
-  mArmState.startSimulationIteration();
-  mArmState.applyGravity( timeSlice );
-  mArmState.applyMotor( motor, timeSlice );
-  mArmState.updateAngleVel( timeSlice );
-  mArmState.applyFriction( mStaticFriction, mRollingFriction, timeSlice );
-  mArmState.updateAngle( timeSlice );
-  mArmState.imposePositionHardLimits();
-  mArmState.endSimulationIteration();
+  mArmState->startSimulationIteration();
+  mArmState->applyGravity( timeSlice );
+  mArmState->applyMotor( motor, timeSlice );
+  mArmState->updateAngleVel( timeSlice );
+  mArmState->applyFriction( mStaticFriction, mRollingFriction, timeSlice );
+  mArmState->updateAngle( timeSlice );
+  mArmState->imposePositionHardLimits();
+  mArmState->endSimulationIteration();
 
   ++mCounter1;
   if( (mCounter1 % sampleInterval ) == 0 ) {
-    mFrontEnd->recordActualError( radToDeg(pError), radToDeg( iError ), radToDeg( dError), mArmState.getActualMotor() * 150 );
+    mFrontEnd->recordActualError( radToDeg(pError), radToDeg( iError ), radToDeg( dError), mArmState->getActualMotor() * 150 );
   }
   updateFrontEnd();
 }
 
 void PidSimBackEnd::updateFrontEnd()
 {
-  mFrontEnd->setArmAngle( mArmState.getAngle() );
+  mFrontEnd->setArmAngle( mArmState->getAngle() );
 }
 
 
