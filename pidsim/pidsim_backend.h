@@ -19,14 +19,15 @@ class BackEnd
 
   void update( std::chrono::duration<double> delta );
  
+
   private:
 
   void softReset();
   void reset();
   void updateOneTick();
   void updateFrontEnd();
-
-  private:
+  void sendErrorToFrontEnd( double pError, double dError, double iError );
+  void updateRobotArmSimulation( double timeSlice, double motorPower );
 
   static constexpr int updatesPerSecond = 50;
 

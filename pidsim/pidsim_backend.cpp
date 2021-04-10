@@ -86,41 +86,55 @@ void BackEnd::updateOneTick()
 
   // Compute and record the error.
 
-  int sampleInterval = updatesPerSecond / mFrontEnd->getSamplesPerSecond();
-
-  double pError = mArmState->getSensorAngle() - mTargetAngle;
+  const double pError = mArmState->getSensorAngle() - mTargetAngle;
   mIError += pError;
-  double iError = mIError * timeSlice; 
-  double dError = (pError - mLastPError) / timeSlice / 5.0;
+  const double iError = mIError * timeSlice; 
+  const double dError = (pError - mLastPError) / timeSlice / 5.0;
   mLastPError = pError;
 
-  double pTerm = pError * mPidP;
-  double iTerm = iError * mPidI;
-  double dTerm = dError * mPidD;
+  const double pTerm = pError * mPidP;
+  const double iTerm = iError * mPidI;
+  const double dTerm = dError * mPidD;
 
-  double allTerms = pTerm + iTerm + dTerm;
-  double motor = std::max(-4.0, std::min( -allTerms, 4.0 )) / 5.0;
+  const double allTerms = pTerm + iTerm + dTerm;
+  const double motorPower = std::max(-4.0, std::min( -allTerms, 4.0 )) / 5.0;
+  sendErrorToFrontEnd( pError, iError, dError );
 
+  updateRobotArmSimulation( timeSlice, motorPower  );
+  updateFrontEnd();
+}
+
+void BackEnd::updateRobotArmSimulation( double timeSlice, double motorPower )
+{
   mArmState->startSimulationIteration();
   mArmState->applyGravity( timeSlice );
-  mArmState->applyMotor( motor, timeSlice );
+  mArmState->applyMotor( motorPower, timeSlice );
   mArmState->updateAngleVel( timeSlice );
   mArmState->applyFriction( mRollingFriction, timeSlice );
   mArmState->updateAngle( timeSlice );
   mArmState->imposePositionHardLimits();
   mArmState->endSimulationIteration();
+}
+
+void BackEnd::sendErrorToFrontEnd( double pError, double dError, double iError )
+{
+  const int sampleInterval = updatesPerSecond / mFrontEnd->getSamplesPerSecond();
 
   ++mCounter1;
   if( (mCounter1 % sampleInterval ) == 0 ) {
-    mFrontEnd->recordActualError( Utils::radToDeg(pError), Utils::radToDeg( iError ), Utils::radToDeg( dError), mArmState->getMotorPower() * 150 );
+    mFrontEnd->recordActualError( 
+      Utils::radToDeg( pError ), 
+      Utils::radToDeg( iError ), 
+      Utils::radToDeg( dError ), 
+      mArmState->getMotorPower() * 150 );
   }
-  updateFrontEnd();
 }
 
 void BackEnd::updateFrontEnd()
 {
   mFrontEnd->setArmAngle( mArmState->getActualAngle() );
 }
+
 
 }
 
