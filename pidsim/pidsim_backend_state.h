@@ -94,10 +94,7 @@ class BackEndState
   double mMaxNoiseInRadians = 0.0;
 
   Utils::MovingAverage<double> mMotorDelay;
-
-  // Todo, put this into its own class.
-  int mSensorDelayInUpdates = 1;
-  std::queue<double> mPastAngles;
+  Utils::Delayer<double> mSensorDelay;
 };
 
 }

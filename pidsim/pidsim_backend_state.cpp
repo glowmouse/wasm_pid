@@ -7,7 +7,8 @@ namespace  PidSim {
 
 BackEndState::BackEndState( double startAngle )
   : mAngle{ startAngle },
-    mMotorDelay{ 1, 0.0 }
+    mMotorDelay{ 1, 0.0 },
+    mSensorDelay{ 1 }
 {
 }
 
@@ -21,13 +22,18 @@ void BackEndState::startSimulationIteration() {
 
 void BackEndState::endSimulationIteration() {
   double noise = static_cast<double>((rand() % 2000)-1000) / 1000.0 * mMaxNoiseInRadians;
-  mPastAngles.push(mAngle + noise );
+  mSensorDelay.push( mAngle + noise );
 }
 
 void BackEndState::setSensorDelay( double sensorDelayInMs )
 {
+  using size_type = decltype( mSensorDelay )::size_type; 
+
   const double sensorDelayInSeconds = sensorDelayInMs / 1000.0;
-  mSensorDelayInUpdates = 1+static_cast<int>(sensorDelayInSeconds * 50.0);
+  const size_type delayInUpdates = 1+static_cast<size_type>(sensorDelayInSeconds * 50.0);
+  if ( delayInUpdates != mSensorDelay.size() ) {
+    mSensorDelay = Utils::Delayer<double>{ delayInUpdates };
+  }
 }
 
 void BackEndState::setSensorNoise( double maxNoiseInDegrees ) {
@@ -111,11 +117,7 @@ void BackEndState::imposePositionHardLimits()
 
 double BackEndState::getSensorAngle() 
 {
-  while ( mSensorDelayInUpdates < mPastAngles.size() )
-  {
-    mPastAngles.pop();
-  }
-  return (0 == mPastAngles.size()) ? 0.0 : mPastAngles.front();
+  return mSensorDelay.pop();
 }
 
 double BackEndState::getActualAngle() 

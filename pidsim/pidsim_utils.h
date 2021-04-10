@@ -103,6 +103,47 @@ class MovingAverage
   T                     mNumEntries;
   T                     mCurrentSum;
 };
+
+template< typename T>
+class Delayer
+{
+  using InternalStorage = std::queue<T>;
+
+  public:
+
+  using value_type = T;
+  using size_type = typename InternalStorage::size_type; 
+
+  Delayer() = delete;
+
+  Delayer( size_type size ) : 
+    mSensorDelay{ size }
+  {
+  }
+
+  T pop() 
+  {
+    while ( mStorage.size() > mSensorDelay ) { mStorage.pop(); }
+    const bool isEmpty = ( 0 == mStorage.size() );
+    return isEmpty ? static_cast<T>(0) : mStorage.front(); 
+  }
+
+  void push( const T val )
+  {
+    mStorage.push( std::move( val ));
+  }
+
+  size_t size() const {
+    return mSensorDelay;
+  }
+
+  private:
+
+  T mDefaultResult;
+  size_type mSensorDelay;
+  InternalStorage mStorage;
+}; 
+
 }
 }
 
