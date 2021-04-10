@@ -1,4 +1,5 @@
 #include "pidsim_backend.h"
+#include "pidsim_utils.h"
 
 PidSimBackEnd::PidSimBackEnd( nanogui::ref<PidSimFrontEnd> frontEnd ) : mFrontEnd{ frontEnd }
 {

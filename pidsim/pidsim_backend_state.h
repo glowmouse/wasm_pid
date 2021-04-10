@@ -2,143 +2,29 @@
 #define __PIDSIM_BACKEND_STATE_H__
 
 #include <queue>
-#include <numeric>
-#include "pidsim_utils.h"
-#include "pidsim_frontend.h"
+#include <vector>
 
 class PidSimBackEndState
 {
   public:
 
-  void reset( double resetAngle ) {
-    mAngle = resetAngle;
-    mAngleVel = 0.0;
-    mMaxNoiseInRadians = 0.0;
-    setMotorDelay( 0.0 );
-  }
+  void reset( double resetAngle );
+  void bump( double bumpVel );
+  void startSimulationIteration();
+  void endSimulationIteration();
+  void setSensorDelay( double sensorDelayInMs );
+  void setMotorDelay( double motorDelayInMs );
+  void setSensorNoise( double maxNoiseInDegrees );
 
-  void bump( double bumpVel ) {
-    mAngleVel += bumpVel;
-  }
-
-  void startSimulationIteration() {
-    mAngleAccel = 0.0;
-  }
-
-  void endSimulationIteration() {
-    double noise = static_cast<double>((rand() % 2000)-1000) / 1000.0 * mMaxNoiseInRadians;
-    mPastAngles.push(mAngle + noise );
-  }
-
-  void setSensorDelay( double sensorDelayInMs )
-  {
-    const double sensorDelayInSeconds = sensorDelayInMs / 1000.0;
-    mSensorDelayInUpdates = 1+static_cast<int>(sensorDelayInSeconds * 50.0);
-  }
-
-  void setMotorDelay( double motorDelayInMs )
-  {
-    const double motorDelayInSeconds = motorDelayInMs / 1000.0;
-    mMotorDelayInUpdates = 1+static_cast<int>(motorDelayInSeconds * 50.0);
-    const double currentMotorAvg = mMotorDelay.size() ?
-      std::accumulate( mMotorDelay.begin(), mMotorDelay.end(), 0.0 ) / ((double) mMotorDelay.size()) :
-      0.0;
-    mMotorDelay.clear();
-    for ( int i = 0; i < mMotorDelayInUpdates; ++i ) {
-      mMotorDelay.push_back( currentMotorAvg );
-    }
-    mMotorDelayIndex = 0;
-  }
-
-  void setSensorNoise( double maxNoiseInDegrees ) {
-    mMaxNoiseInRadians = degToRad(maxNoiseInDegrees);
-  }
-
-  void applyGravity( double timeSlice )
-  {
-    const double armX = cos( mAngle );
-    const double armY = sin( mAngle );
-    // Gravity = < 0   , -9.8 >
-    // Arm     = < armX, armY >
-    // Angular accelleration = Arm x Gravity
-    mAngleAccel += armX * -9.8;
-  }
-
-  double getActualMotor()
-  {
-      return std::accumulate( mMotorDelay.begin(), mMotorDelay.end(), 0.0 ) / ((double) mMotorDelay.size());
-  }
-
-  void applyMotor( double motorPower, double timeSlice )
-  {
-    mMotorDelay.at( mMotorDelayIndex ) = motorPower;
-    mMotorDelayIndex = ( mMotorDelayIndex + 1 ) % mMotorDelayInUpdates;
-
-    mAngleAccel += getActualMotor() / timeSlice;
-  }
-
-  void applyFriction( double staticFriction, double rollingFriction, double timeSlice )
-  {
-    if ( mAngleVel > 0 ) {
-      mAngleVel = std::max(mAngleVel - staticFriction * timeSlice, 0.0 );
-    }
-    else {
-      mAngleVel = std::min(mAngleVel + staticFriction * timeSlice, 0.0 );
-    }
-    // TODO, include timeslice.
-    mAngleVel *= 1.0 - rollingFriction;
-  }
-
-  void updateAngleVel( double timeSlice )
-  {
-    mAngleVel += mAngleAccel * timeSlice;
-    mAngleAccel = 0.0;
-  }
-
-  void updateAngle( double timeSlice )
-  {
-    mAngle += mAngleVel * timeSlice;
-  }
-
-  void imposePositionHardLimits()
-  {
-    //
-    // Impose some hard limits.  -120 degrees is about the angle where
-    // the final segment of the robot arm hits the second segment,
-    // visually.
-    //
-    if ( mAngle < degToRad( -120 )) {
-      mAngle    = degToRad( -120 );
-      mAngleVel = 0.0f;  // A hard stop kills all velocity
-    }
-
-    //
-    // Second limit, where the final segment hits the second segment, but
-    // in the other direction.
-    //
-    if ( mAngle > degToRad( 210 )) {
-      mAngle    = degToRad( 210 );
-      mAngleVel = 0.0f;  // Again, a hard stop kills all velocity
-    }
-  }
-
-  double getSensorAngle() 
-  {
-    while ( mSensorDelayInUpdates < mPastAngles.size() )
-    {
-      mPastAngles.pop();
-    }
-    if ( 0 == mPastAngles.size() ) {
-      return 0.0;
-    }
-    return mPastAngles.front();
-  }
-
-  double getAngle() 
-  {
-    return mAngle;
-  }
-
+  void applyGravity( double timeSlice );
+  double getActualMotor();
+  void applyMotor( double motorPower, double timeSlice );
+  void applyFriction( double staticFriction, double rollingFriction, double timeSlice );
+  void updateAngleVel( double timeSlice );
+  void updateAngle( double timeSlice );
+  void imposePositionHardLimits();
+  double getSensorAngle(); 
+  double getAngle();
 
   private:
 

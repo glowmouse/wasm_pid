@@ -1,6 +1,7 @@
 #ifndef __PIDSIM_BACKEND_H__
 #define __PIDSIM_BACKEND_H__
 
+#include "pidsim_frontend.h"
 #include "pidsim_backend_state.h"
 
 class PidSimBackEnd
