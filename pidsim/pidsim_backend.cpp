@@ -72,19 +72,23 @@ void BackEnd::getInputFromFrontEnd()
 
 void BackEnd::updateOneTick()
 {
+  // Check for input
   getInputFromFrontEnd();
 
+  // Slow time logic
   ++mCounter0;
-  if ( mSlowTime ) {
-    if ( (mCounter0 % 10 ) != 0 ) {
-      return;
-    }
-  }
+  if ( mSlowTime && ( mCounter0 % slowTimeScale ) != 0 ) { return; }
 
-  // Run simulation about 50x a second.
+  // Advance the simulation 1/50th of a second
   const double timeSlice = 1.0/((double) updatesPerSecond);
+
+  // Run the PID controller
   const double motorPower = updatePidController( timeSlice );
-  updateRobotArmSimulation( timeSlice, motorPower  );
+
+  // Advance the robot arm simulation
+  updateRobotArmSimulation( timeSlice, motorPower );
+
+  // Send new positions to the front end.
   updateFrontEnd();
 }
 

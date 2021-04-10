@@ -31,6 +31,7 @@ class BackEnd
   double updatePidController( double timeSlice );
 
   static constexpr int updatesPerSecond = 50;
+  static constexpr unsigned int slowTimeScale    = 10;
 
   double time = 0.0f;
   // map mAngle to "screen space" with <x,y> = <cos(mAngle),sin(mAngle)>
