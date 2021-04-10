@@ -3,7 +3,7 @@
 
 PidSimBackEnd::PidSimBackEnd( nanogui::ref<PidSimFrontEnd> frontEnd ) : 
   mFrontEnd{ frontEnd },
-  mArmState{ std::make_unique<PidSimBackEndState>() }
+  mArmState{ std::make_unique<PidSimBackEndState>( mFrontEnd->getStartAngle()) }
 {
   reset();
 }

@@ -2,7 +2,12 @@
 #include <numeric>
 #include "pidsim_utils.h"
 #include "pidsim_backend_state.h"
-#include "pidsim_frontend.h"
+
+
+PidSimBackEndState::PidSimBackEndState( double startAngle ) 
+{
+  reset( startAngle );
+}
 
 void PidSimBackEndState::reset( double resetAngle ) {
   mAngle = resetAngle;

@@ -8,6 +8,13 @@ class PidSimBackEndState
 {
   public:
 
+  PidSimBackEndState(double startAngle); 
+
+  // Delete default operators that don't want to expose.
+  PidSimBackEndState() = delete;
+  PidSimBackEndState( const PidSimBackEndState& other ) = delete;
+  PidSimBackEndState& operator=( const PidSimBackEndState& other ) = delete;
+
   void reset( double resetAngle );
   void bump( double bumpVel );
   void startSimulationIteration();
