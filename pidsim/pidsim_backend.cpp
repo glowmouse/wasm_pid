@@ -2,18 +2,20 @@
 #include "pidsim_backend_state.h"
 #include "pidsim_utils.h"
 
-PidSimBackEnd::PidSimBackEnd( nanogui::ref<PidSimFrontEnd> frontEnd ) : 
+namespace PidSim {
+
+BackEnd::BackEnd( nanogui::ref<FrontEnd> frontEnd ) : 
   mFrontEnd{ frontEnd },
-  mArmState{ std::make_unique<PidSimBackEndState>( mFrontEnd->getStartAngle()) }
+  mArmState{ std::make_unique<BackEndState>( mFrontEnd->getStartAngle()) }
 {
   reset();
 }
 
-PidSimBackEnd::~PidSimBackEnd()
+BackEnd::~BackEnd()
 {
 }
 
-void PidSimBackEnd::update( std::chrono::duration<double> delta )
+void BackEnd::update( std::chrono::duration<double> delta )
 {
   double intervalSeconds= delta.count();
   int lastTicks= (int) (time * 50);
@@ -25,29 +27,29 @@ void PidSimBackEnd::update( std::chrono::duration<double> delta )
   }
 } 
  
-void PidSimBackEnd::softReset()
+void BackEnd::softReset()
 {
   mPidP = mFrontEnd->getP();
   mPidI = mFrontEnd->getI();
   mPidD = mFrontEnd->getD();
   mRollingFriction = mFrontEnd->getRollingFriction()/50.0;
   mStaticFriction= mFrontEnd->getStaticFriction();
-  mTargetAngle = degToRad(mFrontEnd->getTargetAngle());
+  mTargetAngle = Utils::degToRad(mFrontEnd->getTargetAngle());
   mArmState->setSensorNoise( mFrontEnd->getSensorNoise() );
   mArmState->setSensorDelay( mFrontEnd->getSensorDelay() );
   mArmState->setMotorDelay( mFrontEnd->getMotorDelay() );
 }
 
-void PidSimBackEnd::reset()
+void BackEnd::reset()
 {
-  mArmState = std::make_unique< PidSimBackEndState >( 
-    degToRad(mFrontEnd->getStartAngle() ));
+  mArmState = std::make_unique< BackEndState >( 
+    Utils::degToRad(mFrontEnd->getStartAngle() ));
   mFrontEnd->resetErrorRecord();
   mIError = 0;
   softReset();
 }
 
-void PidSimBackEnd::updateOneTick()
+void BackEnd::updateOneTick()
 {
   if ( mFrontEnd->isReset() ) {
     reset();
@@ -111,14 +113,16 @@ void PidSimBackEnd::updateOneTick()
 
   ++mCounter1;
   if( (mCounter1 % sampleInterval ) == 0 ) {
-    mFrontEnd->recordActualError( radToDeg(pError), radToDeg( iError ), radToDeg( dError), mArmState->getActualMotor() * 150 );
+    mFrontEnd->recordActualError( Utils::radToDeg(pError), Utils::radToDeg( iError ), Utils::radToDeg( dError), mArmState->getActualMotor() * 150 );
   }
   updateFrontEnd();
 }
 
-void PidSimBackEnd::updateFrontEnd()
+void BackEnd::updateFrontEnd()
 {
   mFrontEnd->setArmAngle( mArmState->getAngle() );
+}
+
 }
 
 

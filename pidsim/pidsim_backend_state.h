@@ -7,7 +7,7 @@
 #include <iostream>
 
 namespace PidSim {
-namespace Util {
+namespace Utils {
  
 /// @brief a simple Moving Average class
 ///
@@ -80,16 +80,18 @@ class MovingAverage
 }
 }
 
-class PidSimBackEndState
+namespace PidSim {
+
+class BackEndState
 {
   public:
 
-  PidSimBackEndState(double startAngle); 
+  BackEndState(double startAngle); 
 
   // Delete default operators that don't want to expose.
-  PidSimBackEndState() = delete;
-  PidSimBackEndState( const PidSimBackEndState& other ) = delete;
-  PidSimBackEndState& operator=( const PidSimBackEndState& other ) = delete;
+  BackEndState() = delete;
+  BackEndState( const BackEndState& other ) = delete;
+  BackEndState& operator=( const BackEndState& other ) = delete;
 
   void bump( double bumpVel );
   void startSimulationIteration();
@@ -117,8 +119,10 @@ class PidSimBackEndState
   int mSensorDelayInUpdates = 1;
   std::queue<double> mPastAngles;
 
-  PidSim::Util::MovingAverage<double> mMotorDelay;
+  Utils::MovingAverage<double> mMotorDelay;
 };
+
+}
 
 #endif
 

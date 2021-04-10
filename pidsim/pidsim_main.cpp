@@ -14,7 +14,7 @@
 #include <emscripten.h>
 #include <iostream>
 
-std::unique_ptr<PidSimBackEnd> backEndSingleton;
+std::unique_ptr<PidSim::BackEnd> backEndSingleton;
 
 static std::chrono::high_resolution_clock::time_point lastTickTime;
 
@@ -35,8 +35,8 @@ int main(int /* argc */, char ** /* argv */) {
           // Note - ref is a custom shared pointer.  The reference
           // count is integrated into nanogui's object.
           //
-          nanogui::ref<PidSimFrontEnd> pidSimFrontEnd = new PidSimFrontEnd();
-          backEndSingleton = std::make_unique<PidSimBackEnd>( pidSimFrontEnd );
+          nanogui::ref<PidSim::FrontEnd> pidSimFrontEnd = new PidSim::FrontEnd();
+          backEndSingleton = std::make_unique<PidSim::BackEnd>( pidSimFrontEnd );
           pidSimFrontEnd->drawAll();
           pidSimFrontEnd->setVisible(true);
           emscripten_set_main_loop(mainloop, 0,1);

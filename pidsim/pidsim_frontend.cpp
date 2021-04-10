@@ -11,6 +11,8 @@
 #include <sstream>
 #include <iomanip>
 
+namespace PidSim {
+
 ///
 /// Create a slider with a label
 ///
@@ -268,7 +270,7 @@ void main() {
 }
 )";
 
-PidSimFrontEnd::PidSimFrontEnd() : 
+FrontEnd::FrontEnd() : 
       nanogui::Screen(
         Eigen::Vector2i(800, 600), 
         "NanoGUI Test", 
@@ -450,13 +452,13 @@ PidSimFrontEnd::PidSimFrontEnd() :
     assert( mAxis.size() == axisSamples );
   }
 
-PidSimFrontEnd::~PidSimFrontEnd() 
+FrontEnd::~FrontEnd() 
   {
     mShader.free();
     mGrapher.free();
   }
 
-bool PidSimFrontEnd::keyboardEvent(int key, int scancode, int action, int modifiers) 
+bool FrontEnd::keyboardEvent(int key, int scancode, int action, int modifiers) 
   {
     if (Screen::keyboardEvent(key, scancode, action, modifiers))
       return true;
@@ -467,12 +469,12 @@ bool PidSimFrontEnd::keyboardEvent(int key, int scancode, int action, int modifi
     return false;
   }
 
-  void PidSimFrontEnd::draw(NVGcontext *ctx) {
+  void FrontEnd::draw(NVGcontext *ctx) {
     /* Draw the user interface */
     Screen::draw(ctx);
   }
 
-  void PidSimFrontEnd::drawContents() {
+  void FrontEnd::drawContents() {
     using namespace nanogui;
 
     double angleRad = -mArmAngle + M_PI/2;
@@ -559,35 +561,35 @@ bool PidSimFrontEnd::keyboardEvent(int key, int scancode, int action, int modifi
     mGrapher.drawIndexed(GL_TRIANGLES, 0, numGraphIndices );
   }
 
-  bool PidSimFrontEnd::isReset()
+  bool FrontEnd::isReset()
   {
     bool result = mReset;
     mReset=false;
     return result;
   }
 
-  bool PidSimFrontEnd::isNudgeDown()
+  bool FrontEnd::isNudgeDown()
   {
     bool result = mNudgeDown;
     mNudgeDown=false;
     return result;
   }
 
-  bool PidSimFrontEnd::isNudgeUp()
+  bool FrontEnd::isNudgeUp()
   {
     bool result = mNudgeUp;
     mNudgeUp=false;
     return result;
   }
 
-  bool PidSimFrontEnd::isWackDown()
+  bool FrontEnd::isWackDown()
   {
     bool result = mWackDown;
     mWackDown=false;
     return result;
   }
 
-  bool PidSimFrontEnd::isWackUp()
+  bool FrontEnd::isWackUp()
   {
     bool result = mWackUp;
     mWackUp=false;
@@ -595,14 +597,14 @@ bool PidSimFrontEnd::keyboardEvent(int key, int scancode, int action, int modifi
   }
 
 
-  bool PidSimFrontEnd::isNewSettings()
+  bool FrontEnd::isNewSettings()
   {
     bool result = mHardReset;
     mHardReset=false;
     return result;
   }
 
-  bool PidSimFrontEnd::isSlowTime()
+  bool FrontEnd::isSlowTime()
   {
     bool result = mSlowTime;
     mSlowTime =false;
@@ -614,21 +616,21 @@ bool PidSimFrontEnd::keyboardEvent(int key, int scancode, int action, int modifi
     return mSlowTimeState;
   }
 
-  void PidSimFrontEnd::setArmAngle( double angle ) {
-    int intAngle = radToDeg(angle);
+  void FrontEnd::setArmAngle( double angle ) {
+    int intAngle = Utils::radToDeg(angle);
     mAngleCurrent->setValue( std::to_string( intAngle ));
     mArmAngle = angle;
   }
 
-  double PidSimFrontEnd::getStartAngle() {
+  double FrontEnd::getStartAngle() {
     return mStartAngle;
   }
 
-  double PidSimFrontEnd::getTargetAngle() {
+  double FrontEnd::getTargetAngle() {
     return mTargetAngle;
   }
 
-  void PidSimFrontEnd::resetErrorRecord()
+  void FrontEnd::resetErrorRecord()
   {
     mPError.clear();
     mIError.clear();
@@ -642,7 +644,7 @@ bool PidSimFrontEnd::keyboardEvent(int key, int scancode, int action, int modifi
     }
   }
 
-  void PidSimFrontEnd::recordActualError( double pError, double iError, double dError, double motor )
+  void FrontEnd::recordActualError( double pError, double iError, double dError, double motor )
   {
     //Not the cleverist way to do this, but CPU is cheap.
     size_t samplesToMove = samplesToRecord - 1;
@@ -658,7 +660,7 @@ bool PidSimFrontEnd::keyboardEvent(int key, int scancode, int action, int modifi
     mMotor.at( samplesToRecord-1 ) = motor;
   }
 
-  std::pair<int,int> PidSimFrontEnd::populateGraphIndices( 
+  std::pair<int,int> FrontEnd::populateGraphIndices( 
     const std::vector<std::optional<double>> toPlot,
     std::pair<int,int> startData,
     double color
@@ -713,33 +715,36 @@ bool PidSimFrontEnd::keyboardEvent(int key, int scancode, int action, int modifi
     return std::pair<int,int>( endPos, endIndex );
   }
 
-  int PidSimFrontEnd::getSamplesPerSecond()  const { 
+  int FrontEnd::getSamplesPerSecond()  const { 
     return samplesPerSecond; 
   }
 
-  double PidSimFrontEnd::getP() const {
+  double FrontEnd::getP() const {
      return mPidP; 
   }
-  double PidSimFrontEnd::getI() const {
+  double FrontEnd::getI() const {
      return mPidI; 
   }
-  double PidSimFrontEnd::getD() const {
+  double FrontEnd::getD() const {
      return mPidD; 
   }
-  double PidSimFrontEnd::getRollingFriction() const {
+  double FrontEnd::getRollingFriction() const {
      return mRollingFriction; 
   }
-  double PidSimFrontEnd::getStaticFriction() const {
+  double FrontEnd::getStaticFriction() const {
      return mStaticFriction; 
   }
-  double PidSimFrontEnd::getSensorNoise() const {
+  double FrontEnd::getSensorNoise() const {
      return mSensorNoise; 
   }
-  double PidSimFrontEnd::getSensorDelay() const {
+  double FrontEnd::getSensorDelay() const {
      return mSensorDelay; 
   }
-  double PidSimFrontEnd::getMotorDelay() const {
+  double FrontEnd::getMotorDelay() const {
      return mMotorDelay; 
   }
+
+
+}
 
 

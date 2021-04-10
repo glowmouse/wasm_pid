@@ -3,17 +3,19 @@
 
 #include "pidsim_frontend.h"
 
-class PidSimBackEndState;
+namespace PidSim {
 
-class PidSimBackEnd
+class BackEndState;
+
+class BackEnd
 {
   public:
 
-  PidSimBackEnd( nanogui::ref<PidSimFrontEnd> frontEnd );
-  PidSimBackEnd() = delete;
-  PidSimBackEnd( const PidSimBackEnd& other ) = delete;
-  PidSimBackEnd& operator=( PidSimBackEnd& other ) = delete;
-  ~PidSimBackEnd();
+  BackEnd( nanogui::ref<FrontEnd> frontEnd );
+  BackEnd() = delete;
+  BackEnd( const BackEnd& other ) = delete;
+  BackEnd& operator=( BackEnd& other ) = delete;
+  ~BackEnd();
 
   void update( std::chrono::duration<double> delta );
  
@@ -45,9 +47,11 @@ class PidSimBackEnd
   unsigned int mCounter0=0;
   unsigned int mCounter1=0;
 
-  nanogui::ref<PidSimFrontEnd> mFrontEnd;
-  std::unique_ptr<PidSimBackEndState> mArmState;
+  nanogui::ref<FrontEnd> mFrontEnd;
+  std::unique_ptr<BackEndState> mArmState;
 };
+
+}
 
 #endif
 

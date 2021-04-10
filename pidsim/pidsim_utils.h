@@ -3,6 +3,9 @@
 
 #include <math.h>
 
+namespace PidSim {
+namespace Utils {
+
 //
 // Some helper/ utility functions
 //
@@ -28,6 +31,9 @@ inline double radToDeg( double radians )
 {
   return radians / M_PI * 180.0;
 }
+
+} // End Utils
+} // End PidSim
 
 #endif
 

@@ -6,16 +6,18 @@
 #include <optional>             // for std::optional
 #include <vector>               // for std::vector
 
+namespace PidSim {
+
 constexpr double ShaderRed    = 1.0;
 constexpr double ShaderGreen  = 2.0;
 constexpr double ShaderPurple = 3.0;
 constexpr double ShaderOrange = 4.0;
 constexpr double ShaderBlue   = 5.0;
 
-class PidSimFrontEnd: public nanogui::Screen {
+class FrontEnd: public nanogui::Screen {
 public:
-  PidSimFrontEnd();
-  ~PidSimFrontEnd(); 
+  FrontEnd();
+  ~FrontEnd(); 
 
   virtual bool keyboardEvent(int key, int scancode, int action, int modifiers) override; 
 
@@ -110,6 +112,8 @@ private:
   nanogui::MatrixXf graphPositions;
   nanogui::MatrixXu graphIndices;
 };
+
+} // end PidSim Namespace
 
 #endif
 

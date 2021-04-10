@@ -3,37 +3,38 @@
 #include "pidsim_utils.h"
 #include "pidsim_backend_state.h"
 
+namespace  PidSim {
 
-PidSimBackEndState::PidSimBackEndState( double startAngle )
+BackEndState::BackEndState( double startAngle )
   : mAngle{ startAngle },
     mMotorDelay{ 1, 0.0 }
 {
 }
 
-void PidSimBackEndState::bump( double bumpVel ) {
+void BackEndState::bump( double bumpVel ) {
   mAngleVel += bumpVel;
 }
 
-void PidSimBackEndState::startSimulationIteration() {
+void BackEndState::startSimulationIteration() {
   mAngleAccel = 0.0;
 }
 
-void PidSimBackEndState::endSimulationIteration() {
+void BackEndState::endSimulationIteration() {
   double noise = static_cast<double>((rand() % 2000)-1000) / 1000.0 * mMaxNoiseInRadians;
   mPastAngles.push(mAngle + noise );
 }
 
-void PidSimBackEndState::setSensorDelay( double sensorDelayInMs )
+void BackEndState::setSensorDelay( double sensorDelayInMs )
 {
   const double sensorDelayInSeconds = sensorDelayInMs / 1000.0;
   mSensorDelayInUpdates = 1+static_cast<int>(sensorDelayInSeconds * 50.0);
 }
 
-void PidSimBackEndState::setSensorNoise( double maxNoiseInDegrees ) {
-  mMaxNoiseInRadians = degToRad(maxNoiseInDegrees);
+void BackEndState::setSensorNoise( double maxNoiseInDegrees ) {
+  mMaxNoiseInRadians = Utils::degToRad(maxNoiseInDegrees);
 }
 
-void PidSimBackEndState::applyGravity( double timeSlice )
+void BackEndState::applyGravity( double timeSlice )
 {
   const double armX = cos( mAngle );
   const double armY = sin( mAngle );
@@ -43,28 +44,28 @@ void PidSimBackEndState::applyGravity( double timeSlice )
   mAngleAccel += armX * -9.8;
 }
 
-void PidSimBackEndState::setMotorDelay( double MotorDelayMS )
+void BackEndState::setMotorDelay( double MotorDelayMS )
 {
   using size_type = decltype(mMotorDelay)::size_type;
   size_type newNumDelays = 1+static_cast<size_type>(MotorDelayMS / 1000.0 * 50.0);
   if ( newNumDelays != mMotorDelay.size() ) {
     const double currentAverage = mMotorDelay.getAverage();
-    mMotorDelay = PidSim::Util::MovingAverage<double>( newNumDelays, currentAverage );
+    mMotorDelay = Utils::MovingAverage<double>( newNumDelays, currentAverage );
   }
 }
 
-double PidSimBackEndState::getActualMotor()
+double BackEndState::getActualMotor()
 {
   return mMotorDelay.getAverage();
 }
 
-void PidSimBackEndState::applyMotor( double motorPower, double timeSlice )
+void BackEndState::applyMotor( double motorPower, double timeSlice )
 {
   mMotorDelay.newValue( motorPower );
   mAngleAccel += getActualMotor() / timeSlice;
 }
 
-void PidSimBackEndState::applyFriction( double staticFriction, double rollingFriction, double timeSlice )
+void BackEndState::applyFriction( double staticFriction, double rollingFriction, double timeSlice )
 {
   if ( mAngleVel > 0 ) {
     mAngleVel = std::max(mAngleVel - staticFriction * timeSlice, 0.0 );
@@ -75,26 +76,26 @@ void PidSimBackEndState::applyFriction( double staticFriction, double rollingFri
   mAngleVel *= 1.0 - rollingFriction;
 }
 
-void PidSimBackEndState::updateAngleVel( double timeSlice )
+void BackEndState::updateAngleVel( double timeSlice )
 {
   mAngleVel += mAngleAccel * timeSlice;
   mAngleAccel = 0.0;
 }
 
-void PidSimBackEndState::updateAngle( double timeSlice )
+void BackEndState::updateAngle( double timeSlice )
 {
   mAngle += mAngleVel * timeSlice;
 }
 
-void PidSimBackEndState::imposePositionHardLimits()
+void BackEndState::imposePositionHardLimits()
 {
   //
   // Impose some hard limits.  -120 degrees is about the angle where
   // the final segment of the robot arm hits the second segment,
   // visually.
   //
-  if ( mAngle < degToRad( -120 )) {
-    mAngle    = degToRad( -120 );
+  if ( mAngle < Utils::degToRad( -120 )) {
+    mAngle    = Utils::degToRad( -120 );
     mAngleVel = 0.0f;  // A hard stop kills all velocity
   }
 
@@ -102,13 +103,13 @@ void PidSimBackEndState::imposePositionHardLimits()
   // Second limit, where the final segment hits the second segment, but
   // in the other direction.
   //
-  if ( mAngle > degToRad( 210 )) {
-    mAngle    = degToRad( 210 );
+  if ( mAngle > Utils::degToRad( 210 )) {
+    mAngle    = Utils::degToRad( 210 );
     mAngleVel = 0.0f;  // Again, a hard stop kills all velocity
   }
 }
 
-double PidSimBackEndState::getSensorAngle() 
+double BackEndState::getSensorAngle() 
 {
   while ( mSensorDelayInUpdates < mPastAngles.size() )
   {
@@ -117,8 +118,11 @@ double PidSimBackEndState::getSensorAngle()
   return (0 == mPastAngles.size()) ? 0.0 : mPastAngles.front();
 }
 
-double PidSimBackEndState::getAngle() 
+double BackEndState::getAngle() 
 {
   return mAngle;
 }
+
+}
+
 
