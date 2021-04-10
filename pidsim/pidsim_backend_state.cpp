@@ -71,14 +71,8 @@ void BackEndState::applyMotor( double motorPower, double timeSlice )
   mAngleAccel += getMotorPower() / timeSlice;
 }
 
-void BackEndState::applyFriction( double staticFriction, double rollingFriction, double timeSlice )
+void BackEndState::applyFriction( double rollingFriction, double timeSlice )
 {
-  if ( mAngleVel > 0 ) {
-    mAngleVel = std::max(mAngleVel - staticFriction * timeSlice, 0.0 );
-  }
-  else {
-    mAngleVel = std::min(mAngleVel + staticFriction * timeSlice, 0.0 );
-  }
   mAngleVel *= 1.0 - rollingFriction;
 }
 

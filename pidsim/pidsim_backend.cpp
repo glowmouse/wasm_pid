@@ -33,7 +33,6 @@ void BackEnd::softReset()
   mPidI = mFrontEnd->getI();
   mPidD = mFrontEnd->getD();
   mRollingFriction = mFrontEnd->getRollingFriction()/50.0;
-  mStaticFriction= mFrontEnd->getStaticFriction();
   mTargetAngle = Utils::degToRad(mFrontEnd->getTargetAngle());
   mArmState->setSensorNoise( mFrontEnd->getSensorNoise() );
   mArmState->setSensorDelay( mFrontEnd->getSensorDelay() );
@@ -106,7 +105,7 @@ void BackEnd::updateOneTick()
   mArmState->applyGravity( timeSlice );
   mArmState->applyMotor( motor, timeSlice );
   mArmState->updateAngleVel( timeSlice );
-  mArmState->applyFriction( mStaticFriction, mRollingFriction, timeSlice );
+  mArmState->applyFriction( mRollingFriction, timeSlice );
   mArmState->updateAngle( timeSlice );
   mArmState->imposePositionHardLimits();
   mArmState->endSimulationIteration();

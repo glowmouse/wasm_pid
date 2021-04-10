@@ -76,14 +76,29 @@ class BackEndState
   /// @brief The the simulated Motor Output
   ///
   double getMotorPower();
-
+  
+  // @brief Start a simulation iteration
   void startSimulationIteration();
+
+  // @brief Add gravity to the arm slice for timeSlice seconds
   void applyGravity( double timeSlice );
+
+  // @brief Add motor power to the arm slice for timeSlice seconds
   void applyMotor( double motorPower, double timeSlice );
-  void applyFriction( double staticFriction, double rollingFriction, double timeSlice );
+
+  // @brief Apply rolling friction to the arm for timeSlice seconds
+  void applyFriction( double rollingFriction, double timeSlice );
+
+  // @brief Integrate the current angular accelleration into the angular velocity
   void updateAngleVel( double timeSlice );
+
+  // @brief Integrate the current angular velocity into the angle.
   void updateAngle( double timeSlice );
+
+  // @brief Impost any hard limits  i.e., the arm can't swing past certain angles
   void imposePositionHardLimits();
+
+  // @brief End a simulation iteration 
   void endSimulationIteration();
 
   private:

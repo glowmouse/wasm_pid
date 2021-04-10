@@ -38,7 +38,6 @@ class BackEnd
   double mLastPidI = 0;
   double mPidD = 0;
   double mRollingFriction = 0;
-  double mStaticFriction= 0;
   double mIError = 0;
   double mLastPError = 0;
   double mTargetAngle = 0;
