@@ -2,13 +2,18 @@
 #define __PIDSIM_BACKEND_H__
 
 #include "pidsim_frontend.h"
-#include "pidsim_backend_state.h"
+
+class PidSimBackEndState;
 
 class PidSimBackEnd
 {
   public:
 
   PidSimBackEnd( nanogui::ref<PidSimFrontEnd> frontEnd );
+  PidSimBackEnd() = delete;
+  PidSimBackEnd( const PidSimBackEnd& other ) = delete;
+  PidSimBackEnd& operator=( PidSimBackEnd& other ) = delete;
+  ~PidSimBackEnd();
 
   void update( std::chrono::duration<double> delta );
  

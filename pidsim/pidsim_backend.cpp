@@ -1,4 +1,5 @@
 #include "pidsim_backend.h"
+#include "pidsim_backend_state.h"
 #include "pidsim_utils.h"
 
 PidSimBackEnd::PidSimBackEnd( nanogui::ref<PidSimFrontEnd> frontEnd ) : 
@@ -6,6 +7,10 @@ PidSimBackEnd::PidSimBackEnd( nanogui::ref<PidSimFrontEnd> frontEnd ) :
   mArmState{ std::make_unique<PidSimBackEndState>( mFrontEnd->getStartAngle()) }
 {
   reset();
+}
+
+PidSimBackEnd::~PidSimBackEnd()
+{
 }
 
 void PidSimBackEnd::update( std::chrono::duration<double> delta )
