@@ -113,14 +113,14 @@ void BackEnd::updateOneTick()
 
   ++mCounter1;
   if( (mCounter1 % sampleInterval ) == 0 ) {
-    mFrontEnd->recordActualError( Utils::radToDeg(pError), Utils::radToDeg( iError ), Utils::radToDeg( dError), mArmState->getActualMotor() * 150 );
+    mFrontEnd->recordActualError( Utils::radToDeg(pError), Utils::radToDeg( iError ), Utils::radToDeg( dError), mArmState->getMotorPower() * 150 );
   }
   updateFrontEnd();
 }
 
 void BackEnd::updateFrontEnd()
 {
-  mFrontEnd->setArmAngle( mArmState->getAngle() );
+  mFrontEnd->setArmAngle( mArmState->getActualAngle() );
 }
 
 }

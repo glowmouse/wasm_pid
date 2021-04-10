@@ -54,7 +54,7 @@ void BackEndState::setMotorDelay( double MotorDelayMS )
   }
 }
 
-double BackEndState::getActualMotor()
+double BackEndState::getMotorPower()
 {
   return mMotorDelay.getAverage();
 }
@@ -62,7 +62,7 @@ double BackEndState::getActualMotor()
 void BackEndState::applyMotor( double motorPower, double timeSlice )
 {
   mMotorDelay.newValue( motorPower );
-  mAngleAccel += getActualMotor() / timeSlice;
+  mAngleAccel += getMotorPower() / timeSlice;
 }
 
 void BackEndState::applyFriction( double staticFriction, double rollingFriction, double timeSlice )
@@ -118,7 +118,7 @@ double BackEndState::getSensorAngle()
   return (0 == mPastAngles.size()) ? 0.0 : mPastAngles.front();
 }
 
-double BackEndState::getAngle() 
+double BackEndState::getActualAngle() 
 {
   return mAngle;
 }
