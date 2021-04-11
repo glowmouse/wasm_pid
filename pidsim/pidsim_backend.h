@@ -7,13 +7,25 @@ namespace PidSim {
 
 class BackEndState;
 
+struct PidControllerOutput
+{
+  PidControllerOutput( double pError, double iError, double dError, double motorPower ) :
+  mPError{ pError }, mIError{ iError }, mDError{ dError }, mMotorPower{ motorPower }
+  {}
+
+  double mPError;
+  double mIError;
+  double mDError;
+  double mMotorPower;
+};
+
 class PidController
 {
   public:
 
   void updatePidSettings(double PidP, double PidI, double PidD, double TargetAngle );
 
-  std::tuple< double, double, double, double> 
+  PidControllerOutput
   updatePidController( double timeSlice, double sensorInputAngle );
   void reset();
 

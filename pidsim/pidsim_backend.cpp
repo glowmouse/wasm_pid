@@ -81,14 +81,13 @@ void BackEnd::updateOneTick()
   const double timeSlice = 1.0/((double) updatesPerSecond);
 
   // Run the PID controller
-  const auto[ pError, iError, dError, motorPower ] = 
-    mPidController.updatePidController( timeSlice, mArmState->getSensorAngle()  );
+  const PidControllerOutput pOut = mPidController.updatePidController( timeSlice, mArmState->getSensorAngle() );
 
   // Update the error graph
-  sendErrorToFrontEnd( pError, iError, dError );
+  sendErrorToFrontEnd( pOut.mPError, pOut.mIError, pOut.mDError );
 
   // Advance the robot arm simulation
-  updateRobotArmSimulation( timeSlice, motorPower );
+  updateRobotArmSimulation( timeSlice, pOut.mMotorPower );
 
   // Send new positions to the front end.
   updateFrontEnd();
@@ -140,7 +139,7 @@ void PidController::updatePidSettings(
   mTargetAngle = targetAngle;
 }
 
-std::tuple< double, double, double, double >
+PidControllerOutput
 PidController::updatePidController( double timeSlice, double sensorInputAngle )
 {
   const double pError = sensorInputAngle - mTargetAngle;
@@ -155,7 +154,7 @@ PidController::updatePidController( double timeSlice, double sensorInputAngle )
 
   const double allTerms = pTerm + iTerm + dTerm;
   const double motorPower = std::max(-4.0, std::min( -allTerms, 4.0 )) / 5.0;
-  return std::tuple< double, double, double, double >(pError, iError, dError, motorPower );
+  return PidControllerOutput( pError, iError, dError, motorPower );
 }
 
 void PidController::reset()
