@@ -41,14 +41,6 @@ PidController::updatePidController( double timeSlice, double sensorInputAngle )
   return Output{ pError, iError, dError, motorPower };
 }
 
-// see header for interface.
-void PidController::reset()
-{
-  // Reset the accumulated integral error in the controller.
-  mIError = 0;
-}
-
-
 }
 
 

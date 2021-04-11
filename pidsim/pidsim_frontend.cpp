@@ -450,6 +450,8 @@ FrontEnd::FrontEnd() :
       mAxis.push_back( 0.0 );
     }
     assert( mAxis.size() == axisSamples );
+
+    resetErrorRecord();
   }
 
 FrontEnd::~FrontEnd() 

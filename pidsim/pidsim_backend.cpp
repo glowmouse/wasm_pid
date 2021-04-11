@@ -1,38 +1,53 @@
 #include "pidsim_backend.h"
 #include "pidsim_backend_state.h"
 #include "pidsim_utils.h"
+#include "pidsim_backend_pid_controller.h"
 
 namespace PidSim {
 
 BackEnd::BackEnd( nanogui::ref<FrontEnd> frontEnd ) : 
   mFrontEnd{ frontEnd },
-  mArmState{ std::make_unique<BackEndState>( mFrontEnd->getStartAngle()) }
+  mArmState{ std::make_unique<BackEndState>( Utils::degToRad(mFrontEnd->getStartAngle())) },
+  mPidController{ std::make_unique<PidController>() }
 {
-  reset();
 }
 
+// Declared here so BackEndState & PidController don't need concrete
+// definitions in header file.
 BackEnd::~BackEnd()
 {
 }
 
+// Main update loop for the back end simulation.
+//
+// 1. How many "single updates" are needed to catch the simulation up
+// 2. Run that many single updates
+// 
 void BackEnd::update( std::chrono::duration<double> delta )
 {
-  double intervalSeconds= delta.count();
-  int lastTicks= (int) (time * 50);
-  time += intervalSeconds;
-  int curTicks= (int) (time * 50);
-  int ticksDiff = curTicks - lastTicks;
-  for ( int i = 0; i < ticksDiff; ++i ) {
+  // 1. How many "single updates" are needed to catch the simulation up
+  //
+  const double updatesPerSecondF = static_cast<double>(updatesPerSecond);
+  const unsigned lastUpdatesSinceStart = static_cast<unsigned>( time * updatesPerSecondF );
+  time += delta.count();
+  const unsigned curUpdatesSinceStart = static_cast<unsigned>( time * updatesPerSecondF );
+  const unsigned updatesSinceLast = curUpdatesSinceStart - lastUpdatesSinceStart;
+
+  // 2. Run that many single updates
+  //
+  for ( unsigned update = 0; update < updatesSinceLast; ++update ) {
     updateOneTick();
   }
 } 
  
 void BackEnd::reset()
 {
-  mArmState = std::make_unique< BackEndState >( 
-    Utils::degToRad(mFrontEnd->getStartAngle() ));
+  // Completely replace the old physics simulation & pid controller
+  const double startAngle = Utils::degToRad( mFrontEnd->getStartAngle() );
+  mArmState      = std::make_unique< BackEndState  >( startAngle ); 
+  mPidController = std::make_unique< PidController >();
+  // Reset the error graph on the front end
   mFrontEnd->resetErrorRecord();
-  mPidController.reset();
 }
 
 void BackEnd::getInputFromFrontEnd()
@@ -41,7 +56,7 @@ void BackEnd::getInputFromFrontEnd()
     reset();
   }
 
-  mPidController.updatePidSettings(
+  mPidController->updatePidSettings(
       mFrontEnd->getP(),
       mFrontEnd->getI(),
       mFrontEnd->getD(),
@@ -81,7 +96,7 @@ void BackEnd::updateOneTick()
   const double timeSlice = 1.0/((double) updatesPerSecond);
 
   // Run the PID controller
-  const PidController::Output pOut = mPidController.updatePidController( timeSlice, mArmState->getSensorAngle() );
+  const PidController::Output pOut = mPidController->updatePidController( timeSlice, mArmState->getSensorAngle() );
 
   // Update the error graph
   sendErrorToFrontEnd( pOut.mPError, pOut.mIError, pOut.mDError );

@@ -85,29 +85,31 @@ private:
   std::vector<std::optional<double>> mMotor;
   std::vector<std::optional<double>> mAxis;
 
-  double              mArmAngle = 0.0;
-  double              mStartAngle;
-  double              mTargetAngle;
-  double              mSensorDelay;
-  double              mMotorDelay;
-  double              mPidP;
-  double              mPidI;
-  double              mPidD;
-  double              mStaticFriction;
-  double              mRollingFriction;
-  double              mSensorNoise;
-  bool                mReset = false;
-  bool                mHardReset = false;
-  bool                mSlowTime = false;
-  bool                mSlowTimeState = false;
-  nanogui::Button*    mSlowTimeButton = nullptr;
-  bool                mNudgeDown = false;
-  bool                mNudgeUp = false;
-  bool                mWackDown = false;
-  bool                mWackUp = false;
+  double              mArmAngle           = 0.0;
+  double              mStartAngle         = -90.0;
+  double              mTargetAngle        = 0.0;
+  double              mSensorDelay        = 0.0;
+  double              mMotorDelay         = 0.0;
+  double              mPidP               = 0.0;
+  double              mPidI               = 0.0;
+  double              mPidD               = 0.0;
+  double              mStaticFriction     = 0.0;
+  double              mRollingFriction    = 0.0;
+  double              mSensorNoise        = 0.0;
+  bool                mReset              = false;
+  bool                mHardReset          = false;
+  bool                mSlowTime           = false;
+  bool                mSlowTimeState      = false;
+  bool                mNudgeDown          = false;
+  bool                mNudgeUp            = false;
+  bool                mWackDown           = false;
+  bool                mWackUp             = false;
+
+  nanogui::Button*    mSlowTimeButton     = nullptr;
+  nanogui::TextBox*   mAngleCurrent       = nullptr;
+
   nanogui::GLShader   mShader;
   nanogui::GLShader   mGrapher;
-  nanogui::TextBox*   mAngleCurrent; 
 
   nanogui::MatrixXf graphPositions;
   nanogui::MatrixXu graphIndices;

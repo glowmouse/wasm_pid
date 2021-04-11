@@ -52,11 +52,6 @@ class PidController
   ///
   Output updatePidController( double timeSlice, double sensorAngle );
 
-  ///
-  /// @brief Reset the PID controller.
-  ///
-  void reset();
-
   private:
   double mPidP = 0;
   double mPidI = 0;
