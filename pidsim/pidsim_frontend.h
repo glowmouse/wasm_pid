@@ -73,7 +73,7 @@ private:
   static constexpr size_t    samplesToRecord = samplesPerSecond * secondsToDisplay;
   static constexpr size_t    axisSamples = 30;
 
-  // For each sample, record top, middle, botton for graph
+  // For each sample, record top, middle, bottom for graph
   static constexpr int numGraphPositions = 
       3 * (4*samplesToRecord + axisSamples );
   static constexpr int numGraphIndices   =

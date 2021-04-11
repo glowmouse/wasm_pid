@@ -136,12 +136,12 @@ class Delayer
   ///
   /// @brief Remove a value from the delay queue.
   ///
-  /// 1. Pop values off the fron of the queue until the size is right
+  /// 1. Pop values off the front of the queue until the size is right
   /// 2. If the queue is empty, return 0.  Otherwise return the front value
   ///
   [[nodiscard]] T pop() 
   {
-    // 1. Pop values off the fron of the queue until the size is right
+    // 1. Pop values off the front of the queue until the size is right
     while ( mStorage.size() > mSensorDelay ) { mStorage.pop(); }
     // 2. If the queue is empty, return 0.  Otherwise return the front value
     const bool isEmpty = ( 0 == mStorage.size() );
@@ -149,7 +149,7 @@ class Delayer
   }
 
   ///
-  /// @brief Add avalue to the delay queue
+  /// @brief Add a value to the delay queue
   /// 
   void push( T val )
   {
@@ -157,7 +157,7 @@ class Delayer
   }
 
   ///
-  /// @brief  Get the number of sumulation ticks we're delaying the sensor by
+  /// @brief  Get the number of simulation ticks we're delaying the sensor by
   ///
   /// @return The number of simulation ticks we're delaying the sensor by...
   ///

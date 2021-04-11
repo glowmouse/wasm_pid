@@ -28,7 +28,7 @@ class BackEndState
   /// Setters
   /// 
 
-  /// @brief Add a suddent velocity to the arm.
+  /// @brief Add a suddenly velocity to the arm.
   /// 
   /// @param[in] bumpVel - Velocity to add in radians/s 
   /// 
@@ -89,7 +89,7 @@ class BackEndState
   // @brief Apply rolling friction to the arm for timeSlice seconds
   void applyFriction( double rollingFriction, double timeSlice );
 
-  // @brief Integrate the current angular accelleration into the angular velocity
+  // @brief Integrate the current angular acceleration into the angular velocity
   void updateAngleVel( double timeSlice );
 
   // @brief Integrate the current angular velocity into the angle.

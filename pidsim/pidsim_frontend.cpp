@@ -24,11 +24,11 @@ namespace PidSim {
 /// @param[in] noSlider        Just make a label and output, but keep the
 ///                            formatting consistent.
 ///
-/// @return A non-owning pointer to the text box that displayers the 
+/// @return A non-owning pointer to the text box that displays the 
 ///         slider's value.  Ownership of objects created is held by 
 ///         parent.
 ///
-/// TODO - the noSlider objects is ugly.  Find a way to refactor?
+/// TODO - the noSlider objects is ugly.  Find a way to re-factor?
 /// 
 nanogui::TextBox* makeSlider( 
   nanogui::Widget*                    parent,
@@ -135,7 +135,7 @@ float diffuseScale  = .4;
 float ambientScale  = .3;
 float specularScale = .5;
 
-// Use lightBlue for ambient & diffuse, white for specilar.
+// Use lightBlue for ambient & diffuse, white for specular.
 //
 vec3 objcolor     = vec3(  .7,   .7, 1.0);
 vec3 white        = vec3( 1.0, 1.0, 1.0); 
@@ -646,7 +646,7 @@ bool FrontEnd::keyboardEvent(int key, int scancode, int action, int modifiers)
 
   void FrontEnd::recordActualError( double pError, double iError, double dError, double motor )
   {
-    //Not the cleverist way to do this, but CPU is cheap.
+    //Not the cleverest way to do this, but CPU is cheap.
     size_t samplesToMove = samplesToRecord - 1;
     for ( size_t i = 0; i < samplesToMove; ++i ) {
       mPError.at( i ) = mPError.at( i+1 );

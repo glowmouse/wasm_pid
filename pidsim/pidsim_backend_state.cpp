@@ -46,7 +46,7 @@ void BackEndState::applyGravity( double timeSlice )
   const double armY = sin( mAngle );
   // Gravity = < 0   , -9.8 >
   // Arm     = < armX, armY >
-  // Angular accelleration = Arm x Gravity
+  // Angular acceleration = Arm x Gravity
   mAngleAccel += armX * -9.8;
 }
 
