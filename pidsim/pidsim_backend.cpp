@@ -81,7 +81,7 @@ void BackEnd::updateOneTick()
   const double timeSlice = 1.0/((double) updatesPerSecond);
 
   // Run the PID controller
-  const PidControllerOutput pOut = mPidController.updatePidController( timeSlice, mArmState->getSensorAngle() );
+  const PidController::Output pOut = mPidController.updatePidController( timeSlice, mArmState->getSensorAngle() );
 
   // Update the error graph
   sendErrorToFrontEnd( pOut.mPError, pOut.mIError, pOut.mDError );
