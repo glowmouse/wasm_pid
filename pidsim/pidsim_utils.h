@@ -42,9 +42,11 @@ inline double radToDeg( double radians )
 template< typename T >
 class MovingAverage
 {
+  // Use an std::vector for internal storage.
   using InternalStorage = std::vector<T>;
 
   public:
+  // Expose some standard types
   using value_type = T;
   using size_type = typename InternalStorage::size_type; 
 
@@ -54,12 +56,14 @@ class MovingAverage
   /// @param[in] initValue  The initial average
   ///  
   MovingAverage( size_type size, const T& initValue ) :
-    mStorage( size, initValue ),
-    mNumEntries{ static_cast<T>(size) },
+    mStorage    ( size, initValue ),
+    mNumEntries { static_cast<T>(size) },
     mCurrentSum { mNumEntries * initValue }
   {
     assert( size > 0 );   // Moving average of 0 makes no sense.
   }
+
+  // Remove constructors I probably never want (i.e., if used they're a bug)
   MovingAverage() = delete;
 
   /// 
@@ -67,7 +71,7 @@ class MovingAverage
   ///
   /// @return The average
   ///
-  T getAverage() const 
+  [[nodiscard]] T getAverage() const 
   {
     return mCurrentSum / mNumEntries; 
   }
@@ -77,7 +81,7 @@ class MovingAverage
   ///
   /// @return The number of entries we're averaging together
   /// 
-  size_type size() const 
+  [[nodiscard]] size_type size() const 
   {
     return mStorage.size();
   }
@@ -107,41 +111,66 @@ class MovingAverage
 template< typename T>
 class Delayer
 {
+  // The Delayer is basically a wrapper for a std::queue.
   using InternalStorage = std::queue<T>;
 
   public:
 
+  // Expose some standard types
   using value_type = T;
   using size_type = typename InternalStorage::size_type; 
 
-  Delayer() = delete;
-
-  Delayer( size_type size ) : 
-    mSensorDelay{ size }
+  /// @brief Constructor
+  ///
+  /// @param[in] sensorDelay - Number of simulation ticks we want
+  ///     to delay the sensor output.
+  /// 
+  Delayer( size_type sensorDelay ) : 
+    mSensorDelay{ sensorDelay }
   {
   }
 
-  T pop() 
+  // Remove constructors I probably never want (i.e., if used they're a bug)
+  Delayer() = delete;
+  
+  ///
+  /// @brief Remove a value from the delay queue.
+  ///
+  /// 1. Pop values off the fron of the queue until the size is right
+  /// 2. If the queue is empty, return 0.  Otherwise return the front value
+  ///
+  [[nodiscard]] T pop() 
   {
+    // 1. Pop values off the fron of the queue until the size is right
     while ( mStorage.size() > mSensorDelay ) { mStorage.pop(); }
+    // 2. If the queue is empty, return 0.  Otherwise return the front value
     const bool isEmpty = ( 0 == mStorage.size() );
     return isEmpty ? static_cast<T>(0) : mStorage.front(); 
   }
 
-  void push( const T val )
+  ///
+  /// @brief Add avalue to the delay queue
+  /// 
+  void push( T val )
   {
     mStorage.push( std::move( val ));
   }
 
-  size_t size() const {
+  ///
+  /// @brief  Get the number of sumulation ticks we're delaying the sensor by
+  ///
+  /// @return The number of simulation ticks we're delaying the sensor by...
+  ///
+  [[nodiscard]] size_type size() const {
     return mSensorDelay;
   }
 
   private:
 
-  T mDefaultResult;
-  size_type mSensorDelay;
-  InternalStorage mStorage;
+  // How many ticks to delay
+  size_type         mSensorDelay;
+  // Internal storage.  Really an std::queue
+  InternalStorage   mStorage;
 }; 
 
 }
