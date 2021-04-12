@@ -1,18 +1,18 @@
 #include "pidsim_backend.h"
-#include "pidsim_backend_state.h"
-#include "pidsim_utils.h"
+#include "pidsim_backend_physics_sim.h"
 #include "pidsim_backend_pid_controller.h"
+#include "pidsim_utils.h"
 
 namespace PidSim {
 
 BackEnd::BackEnd( nanogui::ref<FrontEnd> frontEnd ) : 
   mFrontEnd{ frontEnd },
-  mArmState{ std::make_unique<BackEndState>( Utils::degToRad(mFrontEnd->getStartAngle())) },
+  mPhysicsSim{ std::make_unique<PhysicsSim>( Utils::degToRad(mFrontEnd->getStartAngle())) },
   mPidController{ std::make_unique<PidController>() }
 {
 }
 
-// Declared here so BackEndState & PidController don't need concrete
+// Declared here so PhysicsSim & PidController don't need concrete
 // definitions in header file.
 BackEnd::~BackEnd()
 {
@@ -44,7 +44,7 @@ void BackEnd::reset()
 {
   // Completely replace the old physics simulation & pid controller
   const double startAngle = Utils::degToRad( mFrontEnd->getStartAngle() );
-  mArmState      = std::make_unique< BackEndState  >( startAngle ); 
+  mPhysicsSim      = std::make_unique< PhysicsSim  >( startAngle ); 
   mPidController = std::make_unique< PidController >();
   // Reset the error graph on the front end
   mFrontEnd->resetErrorRecord();
@@ -64,22 +64,22 @@ void BackEnd::getInputFromFrontEnd()
   );
 
   mRollingFriction = mFrontEnd->getRollingFriction()/50.0;
-  mArmState->setSensorNoise( mFrontEnd->getSensorNoise() );
-  mArmState->setSensorDelay( mFrontEnd->getSensorDelay() );
-  mArmState->setMotorDelay( mFrontEnd->getMotorDelay() );
+  mPhysicsSim->setSensorNoise( mFrontEnd->getSensorNoise() );
+  mPhysicsSim->setSensorDelay( mFrontEnd->getSensorDelay() );
+  mPhysicsSim->setMotorDelay( mFrontEnd->getMotorDelay() );
   mSlowTime = mFrontEnd->isSlowTime();
 
   if ( mFrontEnd->isNudgeUp()) {
-    mArmState->bump( 3 );
+    mPhysicsSim->bump( 3 );
   }
   if ( mFrontEnd->isNudgeDown()) {
-    mArmState->bump( -3 );
+    mPhysicsSim->bump( -3 );
   }
   if ( mFrontEnd->isWackUp()) {
-    mArmState->bump( 10 );
+    mPhysicsSim->bump( 10 );
   }
   if ( mFrontEnd->isWackDown()) {
-    mArmState->bump( -10 );
+    mPhysicsSim->bump( -10 );
   }
 }
 
@@ -96,7 +96,7 @@ void BackEnd::updateOneTick()
   const double timeSlice = 1.0/((double) updatesPerSecond);
 
   // Run the PID controller
-  const PidController::Output pOut = mPidController->updatePidController( timeSlice, mArmState->getSensorAngle() );
+  const PidController::Output pOut = mPidController->updatePidController( timeSlice, mPhysicsSim->getSensorAngle() );
 
   // Update the error graph
   sendErrorToFrontEnd( pOut.mPError, pOut.mIError, pOut.mDError );
@@ -110,14 +110,14 @@ void BackEnd::updateOneTick()
 
 void BackEnd::updateRobotArmSimulation( double timeSlice, double motorPower )
 {
-  mArmState->startSimulationIteration();
-  mArmState->applyGravity( timeSlice );
-  mArmState->applyMotor( motorPower, timeSlice );
-  mArmState->updateAngleVel( timeSlice );
-  mArmState->applyFriction( mRollingFriction, timeSlice );
-  mArmState->updateAngle( timeSlice );
-  mArmState->imposePositionHardLimits();
-  mArmState->endSimulationIteration();
+  mPhysicsSim->startSimulationIteration();
+  mPhysicsSim->applyGravity();
+  mPhysicsSim->applyMotor( motorPower, timeSlice );
+  mPhysicsSim->updateAngleVel( timeSlice );
+  mPhysicsSim->applyFriction( mRollingFriction );
+  mPhysicsSim->updateAngle( timeSlice );
+  mPhysicsSim->imposePositionHardLimits();
+  mPhysicsSim->endSimulationIteration();
 }
 
 void BackEnd::sendErrorToFrontEnd( double pError, double iError, double dError )
@@ -130,13 +130,13 @@ void BackEnd::sendErrorToFrontEnd( double pError, double iError, double dError )
       Utils::radToDeg( pError ), 
       Utils::radToDeg( iError ), 
       Utils::radToDeg( dError ), 
-      mArmState->getMotorPower() * 150 );
+      mPhysicsSim->getMotorPower() * 150 );
   }
 }
 
 void BackEnd::updateFrontEnd()
 {
-  mFrontEnd->setArmAngle( mArmState->getActualAngle() );
+  mFrontEnd->setArmAngle( mPhysicsSim->getActualAngle() );
 }
 
 }

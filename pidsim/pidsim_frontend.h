@@ -1,8 +1,14 @@
 #ifndef __PIDSIM_FRONTEND_H__
 #define __PIDSIM_FRONTEND_H__
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wint-in-bool-context"
+#pragma clang diagnostic ignored "-Wdeprecated-copy"
+#pragma clang diagnostic ignored "-Wunused-parameter"
+
 #include <nanogui/screen.h>     // for nanogui::Screen
 #include <nanogui/glutil.h>     // for GLShader
+#pragma clang diagnostic pop
 #include <optional>             // for std::optional
 #include <vector>               // for std::vector
 

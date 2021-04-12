@@ -1,4 +1,10 @@
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wint-in-bool-context"
+#pragma clang diagnostic ignored "-Wdeprecated-copy"
+#pragma clang diagnostic ignored "-Wunused-parameter"
 #include <nanogui/common.h>
+#pragma clang diagnostic pop
+
 using namespace nanogui;
 MatrixXu indices(3, 6152);
 MatrixXf positions(3, 16650);

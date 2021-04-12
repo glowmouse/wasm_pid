@@ -6,7 +6,7 @@
 namespace PidSim {
 
 // Forward declare the PID Controller & Simulation classess.
-class BackEndState;
+class PhysicsSim;
 class PidController;
 
 class BackEnd
@@ -54,7 +54,7 @@ class BackEnd
   unsigned int                mCounter1         =0;       // A separate counter :)
 
   nanogui::ref<FrontEnd>           mFrontEnd;             // The front end GUI
-  std::unique_ptr<BackEndState>    mArmState;             // Robot arm physics simulation
+  std::unique_ptr<PhysicsSim>      mPhysicsSim;             // Robot arm physics simulation
   std::unique_ptr<PidController>   mPidController;        // PID controller
 };
 

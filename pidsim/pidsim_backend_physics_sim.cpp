@@ -1,31 +1,31 @@
 #include <queue>
 #include <numeric>
 #include "pidsim_utils.h"
-#include "pidsim_backend_state.h"
+#include "pidsim_backend_physics_sim.h"
 
 namespace  PidSim {
 
-BackEndState::BackEndState( double startAngle )
+PhysicsSim::PhysicsSim( double startAngle )
   : mAngle{ startAngle },
     mMotorDelay{ 1, 0.0 },
     mSensorDelay{ 1 }
 {
 }
 
-void BackEndState::bump( double bumpVel ) {
+void PhysicsSim::bump( double bumpVel ) {
   mAngleVel += bumpVel;
 }
 
-void BackEndState::startSimulationIteration() {
+void PhysicsSim::startSimulationIteration() {
   mAngleAccel = 0.0;
 }
 
-void BackEndState::endSimulationIteration() {
+void PhysicsSim::endSimulationIteration() {
   double noise = static_cast<double>((rand() % 2000)-1000) / 1000.0 * mMaxNoiseInRadians;
   mSensorDelay.push( mAngle + noise );
 }
 
-void BackEndState::setSensorDelay( double sensorDelayInMs )
+void PhysicsSim::setSensorDelay( double sensorDelayInMs )
 {
   using size_type = decltype( mSensorDelay )::size_type; 
 
@@ -36,21 +36,21 @@ void BackEndState::setSensorDelay( double sensorDelayInMs )
   }
 }
 
-void BackEndState::setSensorNoise( double maxNoiseInDegrees ) {
+void PhysicsSim::setSensorNoise( double maxNoiseInDegrees ) {
   mMaxNoiseInRadians = Utils::degToRad(maxNoiseInDegrees);
 }
 
-void BackEndState::applyGravity( double timeSlice )
+void PhysicsSim::applyGravity()
 {
   const double armX = cos( mAngle );
-  const double armY = sin( mAngle );
+  // const double armY = sin( mAngle );
   // Gravity = < 0   , -9.8 >
   // Arm     = < armX, armY >
   // Angular acceleration = Arm x Gravity
   mAngleAccel += armX * -9.8;
 }
 
-void BackEndState::setMotorDelay( double MotorDelayMS )
+void PhysicsSim::setMotorDelay( double MotorDelayMS )
 {
   using size_type = decltype(mMotorDelay)::size_type;
   size_type newNumDelays = 1+static_cast<size_type>(MotorDelayMS / 1000.0 * 50.0);
@@ -60,34 +60,34 @@ void BackEndState::setMotorDelay( double MotorDelayMS )
   }
 }
 
-double BackEndState::getMotorPower()
+double PhysicsSim::getMotorPower()
 {
   return mMotorDelay.getAverage();
 }
 
-void BackEndState::applyMotor( double motorPower, double timeSlice )
+void PhysicsSim::applyMotor( double motorPower, double timeSlice )
 {
   mMotorDelay.newValue( motorPower );
   mAngleAccel += getMotorPower() / timeSlice;
 }
 
-void BackEndState::applyFriction( double rollingFriction, double timeSlice )
+void PhysicsSim::applyFriction( double rollingFriction )
 {
   mAngleVel *= 1.0 - rollingFriction;
 }
 
-void BackEndState::updateAngleVel( double timeSlice )
+void PhysicsSim::updateAngleVel( double timeSlice )
 {
   mAngleVel += mAngleAccel * timeSlice;
   mAngleAccel = 0.0;
 }
 
-void BackEndState::updateAngle( double timeSlice )
+void PhysicsSim::updateAngle( double timeSlice )
 {
   mAngle += mAngleVel * timeSlice;
 }
 
-void BackEndState::imposePositionHardLimits()
+void PhysicsSim::imposePositionHardLimits()
 {
   //
   // Impose some hard limits.  -120 degrees is about the angle where
@@ -109,12 +109,12 @@ void BackEndState::imposePositionHardLimits()
   }
 }
 
-double BackEndState::getSensorAngle() 
+double PhysicsSim::getSensorAngle() 
 {
   return mSensorDelay.pop();
 }
 
-double BackEndState::getActualAngle() 
+double PhysicsSim::getActualAngle() 
 {
   return mAngle;
 }

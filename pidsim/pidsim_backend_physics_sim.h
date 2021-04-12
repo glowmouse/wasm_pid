@@ -9,7 +9,7 @@
 
 namespace PidSim {
 
-class BackEndState
+class PhysicsSim
 {
   public:
 
@@ -17,12 +17,12 @@ class BackEndState
   ///
   /// startAngle - The angle the Arm starts at
   ///
-  BackEndState(double startAngle); 
+  PhysicsSim(double startAngle); 
 
   // Delete default operators that don't want to expose.
-  BackEndState() = delete;
-  BackEndState( const BackEndState& other ) = delete;
-  BackEndState& operator=( const BackEndState& other ) = delete;
+  PhysicsSim() = delete;
+  PhysicsSim( const PhysicsSim& other ) = delete;
+  PhysicsSim& operator=( const PhysicsSim& other ) = delete;
 
   ///
   /// Setters
@@ -81,13 +81,13 @@ class BackEndState
   void startSimulationIteration();
 
   // @brief Add gravity to the arm slice for timeSlice seconds
-  void applyGravity( double timeSlice );
+  void applyGravity();
 
   // @brief Add motor power to the arm slice for timeSlice seconds
   void applyMotor( double motorPower, double timeSlice );
 
   // @brief Apply rolling friction to the arm for timeSlice seconds
-  void applyFriction( double rollingFriction, double timeSlice );
+  void applyFriction( double rollingFriction );
 
   // @brief Integrate the current angular acceleration into the angular velocity
   void updateAngleVel( double timeSlice );

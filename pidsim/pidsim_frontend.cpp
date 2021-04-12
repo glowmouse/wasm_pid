@@ -66,8 +66,6 @@ nanogui::TextBox* makeSlider(
     slider->setCallback([textBox,sliderToLabel](float value) 
       { textBox->setValue(sliderToLabel(value)); } 
     );
-    slider->setFinalCallback([sliderToLabel](float value) {
-    });
   }
   textBox->setFixedSize(Vector2i(80,25));
   textBox->setFontSize(20);
@@ -343,7 +341,7 @@ FrontEnd::FrontEnd() :
       "deg" );
 
     mAngleCurrent = makeSlider( window, "Current Arm Angle", 0.0, 
-      [&](float slider) { return ""; }, "deg", true );
+      [&](float slider) { (void) slider; return ""; }, "deg", true );
 
     new Label(window, "PID Settings", "sans-bold");
     makeSlider( window, "P", 0, 
@@ -446,7 +444,7 @@ FrontEnd::FrontEnd() :
     mShader.setUniform("lightpos", lightpos );
 
     assert( mAxis.size() == 0 );
-    for ( int i = 0; i < axisSamples; ++i ) {
+    for ( std::size_t i = 0; i < axisSamples; ++i ) {
       mAxis.push_back( 0.0 );
     }
     assert( mAxis.size() == axisSamples );
@@ -673,7 +671,6 @@ bool FrontEnd::keyboardEvent(int key, int scancode, int action, int modifiers)
     const int samples = toPlot.size();
     const double dim = 2.0f;
     const double xLeft  = -dim/2;
-    const double xRight =  dim/2;
     const double lineThickness = 0.5;
     const double xInc = dim / ((double) (samples-1) );
 
