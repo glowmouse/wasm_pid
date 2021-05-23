@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project (index.html CXX)
+project (index.html CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -28,7 +28,6 @@ include_directories(
 
 # Just compile the library right in there.
 set ( NANOGUI_LIB_SOURCES
-  ${CMAKE_CURRENT_SOURCE_DIR}/ext/nanovg.c
   ${CMAKE_CURRENT_SOURCE_DIR}/nanogui_src/button.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/nanogui_src/checkbox.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/nanogui_src/colorpicker.cpp
@@ -54,9 +53,11 @@ set ( NANOGUI_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/nanogui_src/tabheader.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/nanogui_src/tabwidget.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/nanogui_src/textbox.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/nanogui_src/theme.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/nanogui_src/vscrollpanel.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/nanogui_src/widget.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/nanogui_src/window.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/ext/nanovg.c
 )
 
 set ( SOURCES
@@ -75,4 +76,6 @@ endforeach()
 
 add_executable(index.html ${SOURCES} ${NANOGUI_LIB_SOURCES})
 
+add_custom_target(server COMMAND python3 -m http.server)
+add_custom_target(webinstall COMMAND cp index.html index.js index.wasm ${CMAKE_CURRENT_SOURCE_DIR}/docs )
 
