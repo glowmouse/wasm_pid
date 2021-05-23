@@ -6,9 +6,25 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(NANOFLAGS "-DNANOGUI_LINUX -DNANOVG_GLES3_IMPLEMENTATION")
-set(GLFLAGS   "-DGLFW_INCLUDE_ES3 -DGLFW_INCLUDE_GLEXT -s USE_GLFW=3 -s FULL_ES3=1 -s USE_WEBGL2=1 -s ASSERTIONS=1 --shell-file ${CMAKE_CURRENT_SOURCE_DIR}/pidsim/shell_minimal.html" )
-set(EMFLAGS   "--std=c++17 -O -s WASM=1" )
+if (NOT DEFINED ENV{EMSDK})
+  message( FATAL_ERROR "emsdk environment wasn't found.  Install the emsdk web assembly compiler by following the instructions at https://emscripten.org/docs/getting_started/downloads.html.  Make source you source emsdk_env.sh before running cmake or compiling")
+endif()
+set(EMSDK $ENV{EMSDK})
+
+# General options
+add_compile_options(-O)
+
+# NANOGUI specific defines
+#
+add_compile_options(-DNANOGUI_LINUX)
+add_compile_options(-DNANOVG_GLES3_IMPLEMENTATION)
+add_compile_options(-DGLFW_INCLUDE_ES3)
+add_compile_options(-DGLFW_INCLUDE_GLEXT)
+
+add_link_options("-shell-file ${EMSDK}/upstream/emscripten/src/shell_minimal.html")
+
+set(GLFLAGS   "-s USE_GLFW=3 -s FULL_ES3=1 -s USE_WEBGL2=1 -s ASSERTIONS=1")
+set(EMFLAGS   "-s WASM=1" )
 set(LDFLAGS   "-lGL -lm -lGLEW" )
 
 set(ALL_COMPILE_FLAGS "${EMFLAGS} ${NANOFLAGS} ${GLFLAGS}")
