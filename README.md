@@ -24,12 +24,12 @@ This page was built using example code from https://github.com/AE1020/nanogui-GL
 | ext         | Libraries from external sources                            |
 | include     | Include files for the nanogui toolkit                      |
 | models      | 3D STL models for the PID Simulator Robot Arm + Converter  |
-| nanogui_src | Source files for the nongui toolkit                        |
+| nanogui_src | Source files for the nanogui toolkit                       |
 | pidsim      | The PID simulator source C++ source code                   |
 
 ## Building (Linux)
 
-1.  Install the emsdk webassembly compiler (see https://emscripten.org/docs/getting_started/downloads.html for instructions)
+1.  Install the emsdk web-assembly compiler (see https://emscripten.org/docs/getting_started/downloads.html for instructions)
 2.  As per the instructions on https://emscripten.org/docs/getting_started/downloads.html, source emsdk_env.sh (i.e., source "emsdk/emsdk_env.sh")
 3.  Clone the wasm_pid repository
 4.  In the source directory, git clone https://github.com/libigl/eigen.git ext/eigen.  This copies the eigen library into the source tree.
