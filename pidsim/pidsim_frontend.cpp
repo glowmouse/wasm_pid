@@ -344,11 +344,11 @@ FrontEnd::FrontEnd() :
       [&](float slider) { (void) slider; return ""; }, "deg", true );
 
     new Label(window, "PID Settings", "sans-bold");
-    makeSlider( window, "P", 0, 
+    makeSlider( window, "Kp", 0, 
       [&](float slider) { return sliderToPid( mPidP, slider ); }, "" );
-    makeSlider( window, "I", 0, 
+    makeSlider( window, "Ki", 0, 
       [&](float slider) { return sliderToPid( mPidI, slider ); }, "" );
-    makeSlider( window, "D", 0, 
+    makeSlider( window, "Kd", 0, 
       [&](float slider) { return sliderToPid( mPidD, slider ); }, "" );
 
     new Label(window, "Simulation Settings", "sans-bold");
