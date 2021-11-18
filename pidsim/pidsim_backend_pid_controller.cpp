@@ -23,7 +23,7 @@ PidController::updatePidController( double timeSlice, double sensorInputAngle )
   const double pError = sensorInputAngle - mTargetAngle;
   mIError += pError;
   const double iError = mIError * timeSlice; 
-  const double dError = (pError - mLastPError) / timeSlice / 5.0;
+  const double dError = (pError - mLastPError) / timeSlice;
 
   // Record the current proportional error so we can compute derivative error next iteration
   mLastPError = pError;
